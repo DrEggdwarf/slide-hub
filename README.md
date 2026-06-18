@@ -5,7 +5,7 @@ Un moteur de présentation React **partagé**, qui sert **plusieurs decks** depu
 ## Démarrer (une commande)
 
 ```bash
-git clone <repo> slide-hub && cd slide-hub && npm install && npm run dev
+git clone https://github.com/DrEggdwarf/slide-hub.git && cd slide-hub && npm install && npm run dev
 ```
 
 - `http://localhost:5173/` → index du hub (liste des decks)
@@ -39,6 +39,12 @@ export default config
 ```
 
 Une slide importe le moteur via les alias `@engine` / `@ui` / `@design`. **Rien à enregistrer** : le deck est auto-découvert (`import.meta.glob`) et chaque slide est code-splittée (charger `/mon-talk` ne tire que ses slides).
+
+## Gérer les decks (dashboard)
+
+L'index `/` est un **tableau de bord** (en mode admin/local) : cartes avec miniatures live, et pour chaque deck — **Présenter / Régie**, copier le **lien** ou le **chemin du dossier**, **Réglages** (orateurs + couleurs, durée et orateur par slide), **Renommer / Dupliquer / Supprimer**, bascule **public / privé**, et **+ Nouveau deck**. Ces actions écrivent dans `decks/` (mode authoring **local** ; le hub déployé reste en lecture seule). Slides toujours éditées en TSX dans ton éditeur.
+
+Header : bouton **« Exposer sur internet »** = lance un tunnel Cloudflare (≠ visibilité public/privé d'un deck) → liens et QR basculent sur l'URL publique.
 
 ## Routes & pilotage
 
@@ -74,6 +80,20 @@ docker compose logs tunnel            # → URL https://….trycloudflare.com
 ```
 
 Sur un VPS : build + `node server/index.js` derrière un reverse-proxy (TLS + WebSocket). Le serveur sert `dist/`, le hub WS `/sync`, `POST /unlock`, et proxifie `/api` si `API_PROXY_TARGET` est défini (decks avec API).
+
+## Backend d'un deck (API + SSE)
+
+Un deck peut avoir un backend (ex. la démo « pachinko » d'Aegyl). Le serveur proxifie `/api/*` vers `API_PROXY_TARGET` (http **ou** https), en flushant les en-têtes → le **SSE** (`text/event-stream`) fonctionne.
+
+```bash
+# Prod / Docker : API interne
+API_PROXY_TARGET=http://mon-api:8787   # (dans docker-compose / Kamal)
+```
+
+> ⚠️ En **`npm run dev`**, le proxy de Vite **ne streame pas le SSE** (limitation Vite) : les données initiales se chargent, mais pas le flux temps réel. Pour tester un deck à SSE **en local complet**, passe par le serveur de prod :
+> ```bash
+> npm run build && API_PROXY_TARGET=https://mon-api PRESENTER_PASSWORD=… npm start
+> ```
 
 ## Architecture
 
