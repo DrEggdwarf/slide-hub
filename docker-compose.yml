@@ -1,0 +1,26 @@
+# Lancer le hub :
+#   docker compose up -d                      → local, http://localhost:3000
+#   docker compose --profile share up         → + tunnel public (URL trycloudflare, sans compte)
+#
+# Le mot de passe régie vient de .env (PRESENTER_PASSWORD) — non versionné.
+services:
+  hub:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      PRESENTER_PASSWORD: ${PRESENTER_PASSWORD:-demo}
+      # Si un deck a une API à proxifier (ex. Aegyl) :
+      # API_PROXY_TARGET: http://mon-api:8787
+    restart: unless-stopped
+
+  # Exposition publique éphémère, sans compte Cloudflare ni ouverture de port.
+  # L'URL https://….trycloudflare.com s'affiche dans les logs : docker compose logs tunnel
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://hub:3000
+    depends_on:
+      - hub
+    profiles:
+      - share
+    restart: unless-stopped
