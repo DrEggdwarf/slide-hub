@@ -106,9 +106,9 @@ export function HubIndex({ notFound }: { notFound?: string }) {
                   <button onClick={stopTunnel} disabled={tunnelBusy} style={{ ...linkBtn, fontSize: 11 }}>repasser en LAN</button>
                 </div>
               ) : (
-                <button onClick={startTunnel} disabled={tunnelBusy} title="Exposer le hub sur internet (tunnel Cloudflare)"
+                <button onClick={startTunnel} disabled={tunnelBusy} title="Rendre le hub joignable depuis internet (tunnel Cloudflare). Indépendant de la visibilité public/privé des decks."
                   style={{ padding: '11px 16px', borderRadius: 12, border: `1px solid ${tokens.color.surface.line}`, background: 'transparent', color: tokens.color.text.secondary, fontFamily: SANS, fontSize: 14, fontWeight: 600, cursor: tunnelBusy ? 'default' : 'pointer' }}>
-                  {tunnelBusy ? 'démarrage…' : 'Passer en public'}
+                  {tunnelBusy ? 'démarrage…' : 'Exposer sur internet'}
                 </button>
               )}
               <button onClick={() => setModal({ kind: 'create' })} style={{ padding: '12px 20px', borderRadius: 12, border: 'none', background: tokens.color.text.primary, color: tokens.color.surface.base, fontFamily: SANS, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
