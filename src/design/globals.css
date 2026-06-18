@@ -44,7 +44,7 @@ button {
   color: #ffffff;
 }
 
-/* Scale slides to fit viewport */
+/* La scène centre le canvas, qui est mis à l'échelle pour remplir l'écran. */
 .slide-stage {
   width: 100vw;
   height: 100vh;
@@ -54,26 +54,32 @@ button {
   position: relative;
   overflow: hidden;
   background: #ffffff;
-  /* Zones de sûreté : le contenu centré ne chevauche jamais l'orateur (haut)
-     ni le footer / la progression / la timeline (bas). --safe-bottom est piloté
-     par le moteur (plus grand quand la timeline est visible). */
-  padding-top: var(--safe-top, 56px);
-  padding-bottom: var(--safe-bottom, 48px);
 }
 
+/* Canvas de design à taille fixe (1280×800), mis à l'échelle via --slide-scale
+   (calculé par le moteur = min(vw/1280, vh/800)) → les slides ne sont jamais
+   « shrinkées », elles remplissent l'écran à dimensions constantes. */
+.slide-scaler {
+  width: 1280px;
+  height: 800px;
+  flex-shrink: 0;
+  position: relative;
+  transform: scale(var(--slide-scale, 1));
+  transform-origin: center;
+}
+
+/* Structure header / body / footer : le body (contenu) occupe tout l'espace
+   entre les zones réservées en haut (orateur) et en bas (footer / progression /
+   timeline), sans empiéter. --safe-bottom grandit quand la timeline est visible. */
 .slide-canvas {
   width: 100%;
-  max-width: 1280px;
-  padding: 0 96px;
+  height: 100%;
+  padding: 56px 80px var(--safe-bottom, 52px);
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
-}
-
-@media (max-width: 800px) {
-  .slide-canvas {
-    padding: 0 32px;
-  }
+  overflow: hidden;
 }

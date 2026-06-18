@@ -51,6 +51,13 @@ export function Presentation({ slides, deckName }: PresentationProps) {
 
   useEffect(() => { const id = window.setInterval(() => setTick((t) => t + 1), 500); return () => window.clearInterval(id) }, [])
 
+  // Met le canvas 1280×800 à l'échelle pour remplir l'écran (slides non « shrinkées »)
+  useEffect(() => {
+    const fit = () => document.documentElement.style.setProperty('--slide-scale', String(Math.min(window.innerWidth / 1280, window.innerHeight / 800)))
+    fit(); window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [])
+
   // Sens d'animation déduit du changement d'index serveur
   const prevIndexRef = useRef(state.slideIndex)
   useEffect(() => {
@@ -138,19 +145,21 @@ export function Presentation({ slides, deckName }: PresentationProps) {
   const Component = currentSlide.Component
 
   return (
-    <div className="slide-stage" style={{ ['--safe-bottom' as never]: showTimeline ? '92px' : '48px' }}>
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={currentSlide.id}
-          initial={{ opacity: 0, x: direction * 24 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: direction * -24 }}
-          transition={{ duration: tokens.motion.duration.base, ease: tokens.motion.ease.inOut }}
-          className="slide-canvas"
-        >
-          <Component step={state.step} totalSteps={totalSteps} isActive next={next} prev={prev} />
-        </motion.div>
-      </AnimatePresence>
+    <div className="slide-stage" style={{ ['--safe-bottom' as never]: showTimeline ? '92px' : '52px' }}>
+      <div className="slide-scaler">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={currentSlide.id}
+            initial={{ opacity: 0, x: direction * 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: direction * -24 }}
+            transition={{ duration: tokens.motion.duration.base, ease: tokens.motion.ease.inOut }}
+            className="slide-canvas"
+          >
+            <Component step={state.step} totalSteps={totalSteps} isActive next={next} prev={prev} />
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
       {currentSlide.meta.speaker?.length ? <Speaker who={currentSlide.meta.speaker} /> : null}
 
