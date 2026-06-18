@@ -8,6 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 import './env.js'
 import http from 'node:http'
+import https from 'node:https'
 import { readFile, stat } from 'node:fs/promises'
 import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -32,8 +33,10 @@ async function sendFile(res, path, cache = false) {
 }
 
 function proxyApi(req, res) {
-  const opts = { hostname: API_TARGET.hostname, port: API_TARGET.port || 80, path: req.url, method: req.method, headers: { ...req.headers, host: API_TARGET.host } }
-  const up = http.request(opts, (r) => {
+  const tls = API_TARGET.protocol === 'https:'
+  const lib = tls ? https : http
+  const opts = { hostname: API_TARGET.hostname, port: API_TARGET.port || (tls ? 443 : 80), path: req.url, method: req.method, headers: { ...req.headers, host: API_TARGET.host } }
+  const up = lib.request(opts, (r) => {
     res.writeHead(r.statusCode || 502, r.headers)
     res.flushHeaders?.() // indispensable pour le SSE (text/event-stream) : ouvre le flux tout de suite
     r.pipe(res)
