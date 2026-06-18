@@ -10,6 +10,9 @@ services:
       - "3000:3000"
     environment:
       PRESENTER_PASSWORD: ${PRESENTER_PASSWORD:-demo}
+      # URL par laquelle les téléphones joignent le hub (pour les liens/QR).
+      # En compose local, mets l'IP LAN de ta machine ; sur VPS, ton domaine.
+      # PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
       # Si un deck a une API à proxifier (ex. Aegyl) :
       # API_PROXY_TARGET: http://mon-api:8787
     restart: unless-stopped

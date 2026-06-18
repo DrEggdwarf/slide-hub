@@ -96,6 +96,8 @@ export function getTunnelUrl() { return _tunnelUrl }
 //  - dev : si on est sur localhost, on remplace par l'IP LAN (joignable par les téléphones)
 export function reachableOrigin(req) {
   if (_tunnelUrl) return _tunnelUrl
+  // override explicite (container / VPS où l'auto-détection ne voit que l'IP Docker)
+  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/+$/, '')
   const proto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim() || (isSecure(req) ? 'https' : 'http')
   let host = ((req.headers['x-forwarded-host'] || req.headers.host) || '').split(',')[0].trim()
   if (/^(localhost|127\.|\[?::1)/.test(host)) {
