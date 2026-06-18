@@ -33,7 +33,11 @@ async function sendFile(res, path, cache = false) {
 
 function proxyApi(req, res) {
   const opts = { hostname: API_TARGET.hostname, port: API_TARGET.port || 80, path: req.url, method: req.method, headers: { ...req.headers, host: API_TARGET.host } }
-  const up = http.request(opts, (r) => { res.writeHead(r.statusCode || 502, r.headers); r.pipe(res) })
+  const up = http.request(opts, (r) => {
+    res.writeHead(r.statusCode || 502, r.headers)
+    res.flushHeaders?.() // indispensable pour le SSE (text/event-stream) : ouvre le flux tout de suite
+    r.pipe(res)
+  })
   up.on('error', () => { res.statusCode = 502; res.end('API indisponible') })
   req.pipe(up)
 }

@@ -49,5 +49,14 @@ export default defineConfig({
     // Autorise n'importe quel Host (IP LAN, tunnel trycloudflare, domaine) —
     // sinon Vite bloque « this host is not allowed » dès qu'on sort de localhost.
     allowedHosts: true,
+    // Proxy /api → backend du deck (ex. l'API live d'Aegyl pour la démo pachinko).
+    // Surcharge : API_PROXY_TARGET=http://localhost:8787 npm run dev (API en local).
+    proxy: {
+      '/api': {
+        target: process.env.API_PROXY_TARGET || 'https://aegyl.fr',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
 })
