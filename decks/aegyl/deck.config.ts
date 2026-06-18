@@ -4,7 +4,7 @@ import type { DeckConfig } from '@engine/decks'
 const config: DeckConfig = {
   brand: 'Aegyl',
   title: 'Aegyl — soutenance',
-  visibility: 'public',
+  visibility: 'private',
   // Couleurs des orateurs (reprises de la palette accent d'Aegyl)
   speakers: { robin: '#1d4ed8', thomas: '#7c3aed', illias: '#b91c1c', arnaud: '#059669' },
   // Ordre du deck (par id = nom de fichier) — repris du registre Aegyl
