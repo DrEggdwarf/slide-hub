@@ -17,6 +17,7 @@ const TUNNEL_CONTAINER = 'slide-hub-tunnel'
 
 const DECKS = fileURLToPath(new URL('../decks', import.meta.url))
 const TRASH = join(DECKS, '.trash')
+const README_TPL = fileURLToPath(new URL('./templates/deck-README.md', import.meta.url))
 const okName = (n) => typeof n === 'string' && /^[a-z0-9-]{1,40}$/.test(n)
 
 const deckConfigTpl = (name) => `import type { DeckConfig } from '@engine/decks'
@@ -136,6 +137,9 @@ export async function handleAuthoring(req, res) {
       await mkdir(join(DECKS, n, 'slides'), { recursive: true })
       await writeFile(cfgPath(n), deckConfigTpl(n))
       await writeFile(slidePath(n, '01-intro'), slideTpl(n))
+      // README d'authoring (guide pour humain / LLM) — pour le workflow Claude Code
+      const readme = (await readFile(README_TPL, 'utf8')).replaceAll('__NAME__', n)
+      await writeFile(join(DECKS, n, 'README.md'), readme)
       return send(res, 200, { ok: true }), true
     }
     if (!okName(name) || !(await exists(join(DECKS, name)))) return send(res, 404, { error: 'deck introuvable' }), true
