@@ -9,7 +9,7 @@ export const meta: SlideMeta = {
   speaker: ['robin'],
   duration: 75,
   steps: 3,
-  notes: 'Step 1 = Dwell (loop), Step 2 = Flight (loop), Step 3 = Seek (loop). Compteur live.',
+  notes: `A partir de l'input d'un clavier on peut dériver 3 mesures`,
 }
 
 /* ── Loop timings (ms) ───────────────────────────────────────── */

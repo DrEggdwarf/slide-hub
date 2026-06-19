@@ -10,7 +10,8 @@ export const meta: SlideMeta = {
   duration: 120,
   steps: 3,
   notes:
-    'Step 0 = scatter. Step 1 = coupes + scores inline. Step 2 = streaming live. Step 3 = 16 mini-charts.',
+    `C'est un algorithme de machine learning qui isole les anomalies` + 
+    `Parler de 2 forêts qui s'entrecoupe, des limites de l'algorithme, des faux positifs et des faux négatifs`,
 }
 
 const CLR = STAGES[1].color

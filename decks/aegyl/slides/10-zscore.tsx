@@ -10,7 +10,7 @@ export const meta: SlideMeta = {
   duration: 105,
   steps: 1,
   notes:
-    'Step 0 = bande σ + clavier idle. Step 1 = frappe live + courbes + z-scores inline.',
+    `Le 1 er filtre n'est pas de machine learning mais juste de l'analyse statistique par rapport a un ecart type connu.  Attaque par replay peut passer ce filtre. Ne pas dire jamais` ,
 }
 
 const AEGYL = tokens.color.accent.aegyl
