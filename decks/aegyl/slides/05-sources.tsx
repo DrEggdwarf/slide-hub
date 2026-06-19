@@ -7,7 +7,13 @@ export const meta: SlideMeta = {
   title: 'État de l\'art',
   speaker: ['arnaud'],
   duration: 45,
-  notes: "La faisabilité n'est pas un pari : 25+ ans de littérature. Insister sur Killourhy & Maxion (benchmark CMU) et Dhakal (136M frappes).",
+  notes: `La faisabilité n'est pas un pari : 25+ ans de littérature.
+• 1997 Monrose & Rubin — l'acte fondateur : le rythme de frappe identifie une personne.
+• 2009 Killourhy & Maxion — le benchmark de référence (CMU, 51 sujets) qui compare les algos.
+• 2015 Mondal & Bours — passage à l'authentification continue (pas juste au login).
+• 2018 Dhakal — l'échelle : 136M de frappes prouvent l'unicité inter-individus.
+• 2023 Huang & Hou — la synthèse récente du domaine (concepts, techniques, applications).
+• 2024 Arrigo — piste récente : même la façon de corriger ses fautes est biométrique.`,
 }
 
 const MONO = tokens.type.family.mono
