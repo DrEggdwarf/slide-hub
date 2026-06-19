@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { DeckGate } from './engine/DeckGate'
 import { HubIndex } from './ui/HubIndex'
+import { ThemeRoot } from './ui/ThemeRoot'
 import './design/globals.css'
 
 // Routage :
@@ -15,6 +16,8 @@ const view = parts[1]
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {deckName ? <DeckGate deckName={deckName} view={view} /> : <HubIndex />}
+    <ThemeRoot>
+      {deckName ? <DeckGate deckName={deckName} view={view} /> : <HubIndex />}
+    </ThemeRoot>
   </React.StrictMode>
 )

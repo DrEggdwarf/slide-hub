@@ -27,6 +27,8 @@ const config: DeckConfig = {
   title: '${name}',
   visibility: 'private', // 'public' = visible par tous
   speakers: { moi: '#1d4ed8' },
+  // Couleurs du projet (utilisables dans les slides via deckColor('primary')) :
+  colors: { primary: '#6366f1', highlight: '#059669' },
 }
 export default config
 `

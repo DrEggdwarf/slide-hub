@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 import { tokens } from '../design/tokens'
+import { useTheme } from './ThemeRoot'
 
 const SHORTCUTS: { keys: string[]; action: string }[] = [
   { keys: ['→', '↓', 'Espace'], action: 'Étape ou slide suivante' },
@@ -34,6 +35,7 @@ interface HelpOverlayProps {
 }
 
 export function HelpOverlay({ onClose, unlocked, pilotToken, origin, deckName, onUnlock }: HelpOverlayProps) {
+  const { theme, toggle } = useTheme()
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -60,8 +62,18 @@ export function HelpOverlay({ onClose, unlocked, pilotToken, origin, deckName, o
         transition={{ duration: tokens.motion.duration.fast, ease: tokens.motion.ease.out }} onClick={(e) => e.stopPropagation()}
         style={{ width: 'min(560px, calc(100vw - 64px))', background: tokens.color.surface.base, border: `1px solid ${tokens.color.surface.line}`, borderRadius: 14, padding: '28px 32px', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}
       >
-        <div style={{ fontFamily: tokens.type.family.mono, fontSize: tokens.type.size.xs, letterSpacing: tokens.type.tracking.wider, textTransform: 'uppercase', color: tokens.color.text.muted, marginBottom: 20 }}>
-          Raccourcis clavier
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={{ fontFamily: tokens.type.family.mono, fontSize: tokens.type.size.xs, letterSpacing: tokens.type.tracking.wider, textTransform: 'uppercase', color: tokens.color.text.muted }}>
+            Raccourcis clavier
+          </div>
+          <div style={{ display: 'flex', border: `1px solid ${tokens.color.surface.line}`, borderRadius: 8, overflow: 'hidden' }}>
+            {(['light', 'dark'] as const).map((t) => (
+              <button key={t} onClick={() => { if (theme !== t) toggle() }}
+                style={{ padding: '5px 12px', border: 'none', cursor: 'pointer', fontFamily: tokens.type.family.mono, fontSize: '11px', background: theme === t ? tokens.color.text.primary : 'transparent', color: theme === t ? tokens.color.surface.base : tokens.color.text.muted }}>
+                {t === 'light' ? 'Clair' : 'Sombre'}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

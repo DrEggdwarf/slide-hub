@@ -93,10 +93,13 @@ const config: DeckConfig = {
   title: 'aegyl',
   visibility: 'private',                 // 'public' = visible sans mot de passe
   speakers: { alice: '#1d4ed8', bob: '#b91c1c' },  // nom → couleur
+  colors: { primary: '#6366f1', highlight: '#059669' }, // couleurs du projet
   // order: ['01-intro', '02-suite'],    // optionnel (sinon ordre alphabétique des fichiers)
 }
 export default config
 ```
+
+**Couleurs du projet** : utilise-les dans une slide via `deckColor('primary')` (import `{ deckColor } from '@engine/decks'`). Pour les couleurs de **thème** (texte, fond), passe par `tokens.color.*` → ça suit automatiquement le **mode clair/sombre** (toggle dans le panneau `h`).
 
 ## Tester
 

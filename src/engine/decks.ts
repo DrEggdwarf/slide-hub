@@ -20,6 +20,8 @@ export interface DeckConfig {
   title?: string
   /** Ordre explicite des slides (par id = nom de fichier sans .tsx). Sinon ordre alphabétique. */
   order?: string[]
+  /** Couleurs du projet : nom → hex. Utilisables dans les slides via deckColor('nom'). */
+  colors?: Record<string, string>
 }
 
 // ── Config du deck actif (posée au boot) + accessors ─────────────────────
@@ -28,6 +30,8 @@ let active: DeckConfig = { brand: 'Slides', speakers: {}, visibility: 'public' }
 
 export function setActiveDeck(c: DeckConfig) { active = c }
 export function brand(): string { return active.brand }
+/** Couleur du projet définie dans deck.config.ts (`colors`), sinon le fallback. */
+export function deckColor(name: string, fallback = '#6366f1'): string { return active.colors?.[name] ?? fallback }
 export function speakerNames(): string[] { return Object.keys(active.speakers) }
 export function speakerColor(name: string): string {
   const def = active.speakers[name]
