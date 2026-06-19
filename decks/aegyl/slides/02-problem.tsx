@@ -7,7 +7,7 @@ export const meta: SlideMeta = {
   speaker: ['robin'],
   duration: 75,
   steps: 1,
-  notes: 'Step 0 = pictogrammes (cadenas brisés / 1 sur 2 / 13 jetons). Step 1 = mur de post-it = la triche humaine.',
+  notes: 'Anecdote hotel restaurant',
 }
 
 const RED = tokens.color.semantic.critical

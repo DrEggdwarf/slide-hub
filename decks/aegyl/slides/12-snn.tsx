@@ -10,8 +10,8 @@ export const meta: SlideMeta = {
   duration: 120,
   steps: 0,
   notes:
-    'Continuous animation. No steps — auto-plays when slide is active. ' +
-    'Speed slider + live counter at bottom.',
+    `Input comparé à l'utilisateur, qui accepte des variations. ` +
+    `Speed slider + live counter at bottom.`,
 }
 
 /* ── Palette ─────────────────────────────────────────────────── */

@@ -9,7 +9,7 @@ export const meta: SlideMeta = {
   speaker: ['robin'],
   duration: 150,
   steps: 4,
-  notes: "Grand convoyeur interactif. 4 portes (flèche/clic) : Taille → géant ; Comportement → agité ; Visage → sosie ; Clé → quasi-jumeau (clé inexacte). Puis MENACES (clic) : Brute force = tentatives au hasard, atypiques → bloquées au Comportement. Replay = frappe enregistrée et rejouée : elle franchit les 4 portes (c'est VOTRE empreinte exacte) et repart avec la clé → FAILLE. Parade = une phrase aléatoire générée à chaque session : la frappe rejouée est sur l'ancienne phrase, elle ne correspond pas → le rejeu ne sert à rien. Drift = votre frappe évolue (pas une attaque) → ré-apprentissage adaptatif, vous restez reconnu.",
+  notes: "Derniere etape de vulgarisation ",
 }
 
 const MONO = tokens.type.family.mono

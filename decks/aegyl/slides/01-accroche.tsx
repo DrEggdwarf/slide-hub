@@ -7,7 +7,7 @@ export const meta: SlideMeta = {
   speaker: ['robin'],
   duration: 45,
   steps: 0,
-  notes: 'Hook : poser le paradoxe vie privée vs biométrie. 1 min.',
+  notes: `Je ne vous l'apprend pas mais les couches de sécurité ajoutent de la friction à l'utilisateur et peuvent l'inciter à contourner la sécurité`,
 }
 
 export function Component(_: SlideContext) {
