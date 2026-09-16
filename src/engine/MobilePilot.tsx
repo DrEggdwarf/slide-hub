@@ -157,7 +157,7 @@ export function MobilePilot({ slides, deckName }: { slides: SlideModule[]; deckN
 
       <div style={{ flex: '1 1 auto', minHeight: 48, background: CARD, border: `1px solid ${LINE}`, borderRadius: 11, padding: '9px 12px', overflow: 'auto' }}>
         <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: 1, color: MUT, marginBottom: 4 }}>TES NOTES</div>
-        <div style={{ fontSize: 15, lineHeight: 1.5 }}>{cur?.meta.notes || <span style={{ color: MUT }}>—</span>}</div>
+        <div style={{ fontSize: 15, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{cur?.meta.notes || <span style={{ color: MUT }}>—</span>}</div>
       </div>
 
       {/* ── BLOC DE CONTRÔLE ── */}

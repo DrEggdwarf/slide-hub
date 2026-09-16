@@ -9,8 +9,33 @@ export const meta: SlideMeta = {
   speaker: ['arnaud'],
   duration: 105,
   steps: 2,
-  notes:
-    'Step 1 = clavier + tableau incrémental. Step 2 = clavier + 16 sparklines. Layout vertical.',
+  notes: `16 mesures extraites du rythme de frappe — 4 familles × 4 statistiques.
+
+APPUI (dwell — temps pendant lequel une touche reste enfoncée)
+1. appui moy — durée moyenne d'appui sur les touches.
+2. appui var — régularité brute (écart-type) des durées d'appui.
+3. appui bas — les appuis les plus courts (10ᵉ percentile), touches survolées.
+4. appui haut — les appuis les plus longs (90ᵉ percentile), touches enfoncées.
+
+INTERVALLE (flight — temps entre le relâchement d'une touche et l'appui de la suivante)
+5. interv. moy — temps moyen entre deux frappes.
+6. interv. var — écart-type des intervalles : à quel point le débit varie.
+7. interv. bas — les enchaînements les plus rapides (10ᵉ percentile).
+8. interv. haut — les pauses les plus longues (90ᵉ percentile).
+
+VISÉE (press-to-press — du début d'une frappe au début de la suivante = appui + intervalle)
+9. visée moy — latence moyenne touche-à-touche.
+10. visée var — écart-type de cette latence.
+11. visée bas — les transitions les plus vives (10ᵉ percentile).
+12. visée haut — les transitions les plus lentes (90ᵉ percentile).
+
+RÉGULARITÉ & FORME (sans dimension)
+13. régul. appui — coefficient de variation des appuis (écart-type / moyenne) : constance de l'appui.
+14. régul. interv. — coefficient de variation des intervalles : constance du débit.
+15. régul. visée — coefficient de variation de la visée : constance du rythme global.
+16. asymétrie — skewness des appuis : penche-t-on vers des frappes courtes ou longues.
+
+Layout : step 1 = clavier + tableau incrémental ; step 2 = clavier + 16 sparklines.`,
 }
 
 /* ── Data ────────────────────────────────────────────────────── */

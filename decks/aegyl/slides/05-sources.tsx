@@ -7,13 +7,7 @@ export const meta: SlideMeta = {
   title: 'État de l\'art',
   speaker: ['arnaud'],
   duration: 45,
-  notes: `25+ ans de littérature — pas un pari.
-• 1997 Monrose & Rubin : l'acte fondateur.
-• 2009 Killourhy & Maxion : le benchmark (CMU).
-• 2015 Mondal & Bours : auth continue.
-• 2018 Dhakal : 136M frappes, l'échelle.
-• 2023 Huang & Hou : la synthèse.
-• 2024 Arrigo : corriger ses fautes = biométrie.`,
+  notes: "",
 }
 
 const MONO = tokens.type.family.mono

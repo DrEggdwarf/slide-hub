@@ -145,11 +145,11 @@ export function Console({ slides, deckName }: { slides: SlideModule[]; deckName:
       <div style={{ display: 'flex', gap: 16 }}>
         <div style={{ flex: 2, background: PANEL, border: `1px solid ${LINE}`, borderRadius: 10, padding: '14px 18px' }}>
           <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 1, color: MUT, marginBottom: 8 }}>NOTES — SLIDE COURANTE</div>
-          <div style={{ fontSize: 15, lineHeight: 1.55, color: TXT }}>{cur?.meta.notes || <span style={{ color: MUT }}>—</span>}</div>
+          <div style={{ fontSize: 15, lineHeight: 1.55, color: TXT, whiteSpace: 'pre-wrap' }}>{cur?.meta.notes || <span style={{ color: MUT }}>—</span>}</div>
         </div>
         <div style={{ flex: 1, background: '#13161c', border: `1px solid ${LINE}`, borderRadius: 10, padding: '14px 18px' }}>
           <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 1, color: MUT, marginBottom: 8 }}>NOTES — SUIVANTE</div>
-          <div style={{ fontSize: 13, lineHeight: 1.5, color: MUT }}>{nxt?.meta.notes || '—'}</div>
+          <div style={{ fontSize: 13, lineHeight: 1.5, color: MUT, whiteSpace: 'pre-wrap' }}>{nxt?.meta.notes || '—'}</div>
         </div>
       </div>
 

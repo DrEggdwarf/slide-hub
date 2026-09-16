@@ -46,6 +46,7 @@ export function NotesPanel({ id, meta }: NotesPanelProps) {
             lineHeight: tokens.type.leading.normal,
             color: tokens.color.text.secondary,
             textAlign: 'left',
+            whiteSpace: 'pre-wrap',
           }}
         >
           {meta.notes}

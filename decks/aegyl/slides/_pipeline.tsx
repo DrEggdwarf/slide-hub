@@ -11,7 +11,7 @@ export const STAGES = [
   { id: 'zscore', label: 'Z-Score', color: tokens.color.accent.zscore },
   { id: 'iforest', label: 'Isolation Forest', color: tokens.color.accent.iforest },
   { id: 'snn', label: 'Réseau Siamois', color: tokens.color.accent.snn },
-  { id: 'sketch', label: 'Secure Sketch', color: tokens.color.accent.sketch },
+  { id: 'fuzzy', label: 'Crypto floue', color: tokens.color.accent.aegyl },
   { id: 'summary', label: 'Résumé', color: tokens.color.accent.ecc },
 ] as const
 
@@ -29,7 +29,7 @@ export function PipelineBar({ active }: { active: number }) {
         alignItems: 'center',
         gap: 0,
         width: '100%',
-        maxWidth: 700,
+        maxWidth: 720,
         zIndex: 5,
       }}
     >
