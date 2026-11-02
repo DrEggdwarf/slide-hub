@@ -20,6 +20,12 @@ const PATHS: Record<string, string> = {
   copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   check: '<polyline points="20 6 9 17 4 12"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  more: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+  smartphone: '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
 }
 function Icon({ name, size = 17 }: { name: string; size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={name === 'play' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: PATHS[name] }} />
@@ -66,6 +72,8 @@ export function HubIndex({ notFound }: { notFound?: string }) {
   const [decksPath, setDecksPath] = useState('')
   const [tunnel, setTunnel] = useState<string | null>(null)
   const [tunnelBusy, setTunnelBusy] = useState(false)
+  const [help, setHelp] = useState(() => { try { return localStorage.getItem('hub-help') !== 'hidden' } catch { return true } })
+  const setHelpPersist = (v: boolean) => { setHelp(v); try { localStorage.setItem('hub-help', v ? 'shown' : 'hidden') } catch { /* ignore */ } }
 
   useEffect(() => {
     fetch('/authoring/ping').then((r) => r.ok ? r.json() : null).then((d) => { setAuthoring(!!d?.authoring); setDecksPath(d?.decksPath || '') }).catch(() => {})
@@ -90,36 +98,45 @@ export function HubIndex({ notFound }: { notFound?: string }) {
 
   return (
     <div style={{ minHeight: '100vh', background: tokens.color.surface.subtle, fontFamily: SANS, padding: '40px 32px 64px' }}>
-      <style>{`.hub-ic{transition:background .12s} .hub-ic:hover{background:rgba(0,0,0,0.07)}`}</style>
+      <style>{HUB_CSS}</style>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
           <div>
             <div style={{ fontFamily: MONO, fontSize: 12, letterSpacing: 3, textTransform: 'uppercase', color: tokens.color.text.muted }}>Slide Hub</div>
             <div style={{ fontSize: 30, fontWeight: 800, color: tokens.color.text.primary, marginTop: 4 }}>Mes présentations</div>
           </div>
-          {canEdit && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              {tunnel ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 12, background: `${tokens.color.semantic.success}14`, border: `1px solid ${tokens.color.semantic.success}55` }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: tokens.color.semantic.success }} />
-                  <span style={{ fontFamily: MONO, fontSize: 11, color: tokens.color.text.secondary }}>en ligne</span>
-                  <button onClick={stopTunnel} disabled={tunnelBusy} style={{ ...linkBtn, fontSize: 11 }}>repasser en LAN</button>
-                </div>
-              ) : (
-                <button onClick={startTunnel} disabled={tunnelBusy} title="Rendre le hub joignable depuis internet (tunnel Cloudflare). Indépendant de la visibilité public/privé des decks."
-                  style={{ padding: '11px 16px', borderRadius: 12, border: `1px solid ${tokens.color.surface.line}`, background: 'transparent', color: tokens.color.text.secondary, fontFamily: SANS, fontSize: 14, fontWeight: 600, cursor: tunnelBusy ? 'default' : 'pointer' }}>
-                  {tunnelBusy ? 'démarrage…' : 'Exposer sur internet'}
-                </button>
-              )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {!help && (
+              <button className="hub-ic" onClick={() => setHelpPersist(true)} data-tip="Rappel du parcours : scène, régie, téléphone" data-tip-end=""
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 12px', borderRadius: 12, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: SANS, fontSize: 14, fontWeight: 600, color: tokens.color.text.secondary }}>
+                <Icon name="help" size={16} /> Aide
+              </button>
+            )}
+            {canEdit && (tunnel ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px 6px 12px', borderRadius: 12, background: `${tokens.color.semantic.success}14`, border: `1px solid ${tokens.color.semantic.success}55` }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: tokens.color.semantic.success }} />
+                <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: tokens.color.text.secondary }}>En ligne</span>
+                <CopyBtn text={tunnel} label="Copier l'URL publique" tip="Lien internet à envoyer : fonctionne partout, y compris en 4G" icon="globe" />
+                <button onClick={stopTunnel} disabled={tunnelBusy} data-tip="Coupe le lien internet : le hub redevient accessible seulement sur ton réseau" data-tip-end="" style={{ ...linkBtn, fontFamily: SANS, fontSize: 12, padding: '6px 6px' }}>Arrêter</button>
+              </div>
+            ) : (
+              <button onClick={startTunnel} disabled={tunnelBusy} data-tip="Crée un lien internet temporaire (tunnel Cloudflare) pour que des personnes hors de ton réseau accèdent au hub. Sans rapport avec public / privé." data-tip-end=""
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '11px 16px', borderRadius: 12, border: `1px solid ${tokens.color.surface.line}`, background: 'transparent', color: tokens.color.text.secondary, fontFamily: SANS, fontSize: 14, fontWeight: 600, cursor: tunnelBusy ? 'default' : 'pointer' }}>
+                <Icon name="globe" size={15} /> {tunnelBusy ? 'Démarrage…' : 'Partager sur internet'}
+              </button>
+            ))}
+            {canEdit && (
               <button onClick={() => setModal({ kind: 'create' })} style={{ padding: '12px 20px', borderRadius: 12, border: 'none', background: tokens.color.text.primary, color: tokens.color.surface.base, fontFamily: SANS, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
                 + Nouveau deck
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
+        {help && <HowItWorks onClose={() => setHelpPersist(false)} />}
+
         {notFound && <div style={{ fontFamily: MONO, fontSize: 13, color: tokens.color.semantic.critical, marginBottom: 16 }}>Deck « {notFound} » introuvable.</div>}
-        {!canEdit && <div style={{ fontFamily: MONO, fontSize: 11, color: tokens.color.text.muted, marginBottom: 16 }}>Mode lecture seule {authoring ? '(déverrouille pour gérer)' : '(édition disponible en local)'}.</div>}
+        {!canEdit && <div style={{ fontFamily: MONO, fontSize: 11, color: tokens.color.text.muted, marginBottom: 16 }}>Mode lecture seule — {authoring ? 'ouvre une scène et entre le mot de passe (touche h) pour pouvoir gérer.' : "la création et l'édition des decks sont disponibles en local (npm run dev)."}</div>}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 22 }}>
           {names.length === 0 && <div style={{ color: tokens.color.text.muted }}>Aucun deck. {canEdit ? 'Clique « Nouveau deck ».' : 'Ajoute un dossier dans decks/.'}</div>}
@@ -127,34 +144,34 @@ export function HubIndex({ notFound }: { notFound?: string }) {
             const cfg = deckConfig(name)
             const pub = cfg?.visibility === 'public'
             return (
-              <div key={name} style={{ background: tokens.color.surface.base, border: `1px solid ${tokens.color.surface.line}`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' }}>
+              <div key={name} style={{ background: tokens.color.surface.base, border: `1px solid ${tokens.color.surface.line}`, borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' }}>
                 <a href={`/${name}`} style={{ display: 'block', padding: 12, paddingBottom: 0 }}><Thumb name={name} /></a>
                 <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <span style={{ fontSize: 16, fontWeight: 700, color: tokens.color.text.primary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cfg?.title ?? cfg?.brand ?? name}</span>
-                    <button onClick={() => canEdit && toggle(name, cfg?.visibility)} disabled={!canEdit} title={canEdit ? 'Basculer public / privé' : undefined}
-                      style={{ flexShrink: 0, fontFamily: MONO, fontSize: 10, padding: '3px 9px', borderRadius: 20, cursor: canEdit ? 'pointer' : 'default', border: `1px solid ${pub ? tokens.color.semantic.success : tokens.color.surface.line}`, background: pub ? `${tokens.color.semantic.success}14` : 'transparent', color: pub ? tokens.color.semantic.success : tokens.color.text.muted }}>
-                      {pub ? 'public' : 'privé'}
+                    <button onClick={() => canEdit && toggle(name, cfg?.visibility)} disabled={!canEdit} data-tip-end=""
+                      data-tip={(pub ? 'Public : visible par tous.' : "Privé : mot de passe demandé avant d'afficher quoi que ce soit.") + (canEdit ? (pub ? ' Clique pour passer en privé.' : ' Clique pour passer en public.') : '')}
+                      style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: SANS, fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20, cursor: canEdit ? 'pointer' : 'default', border: `1px solid ${pub ? tokens.color.semantic.success : tokens.color.surface.line}`, background: pub ? `${tokens.color.semantic.success}14` : 'transparent', color: pub ? tokens.color.semantic.success : tokens.color.text.muted }}>
+                      <Icon name={pub ? 'globe' : 'lock'} size={12} /> {pub ? 'Public' : 'Privé'}
                     </button>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <a href={`/${name}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '9px 10px', borderRadius: 9, textDecoration: 'none', fontFamily: SANS, fontSize: 13, fontWeight: 600, background: tokens.color.text.primary, color: tokens.color.surface.base }}>
-                      <Icon name="play" size={14} /> Présenter
-                    </a>
-                    <a href={`/${name}/console`} title="Régie présentateur" className="hub-ic" style={iconLink}><Icon name="monitor" /></a>
+                    <Action primary icon="play" label="Présenter" tip="Ouvre la scène en plein écran : ce que voit le public" href={`/${name}`} />
+                    <Action icon="monitor" label="Régie" tip="Écran du présentateur : aperçus, notes, chrono et QR code pour piloter au téléphone" href={`/${name}/console`} tipEnd />
                   </div>
-                  <div style={{ display: 'flex', gap: 3, marginTop: 2, alignItems: 'center' }}>
-                    <IconCopy icon="link" title="Copier le lien" text={`${origin}/${name}`} />
-                    <IconBtn icon="external" title="Ouvrir dans un onglet" href={`${origin}/${name}`} />
-                    {canEdit && <>
-                      <span style={{ width: 1, height: 18, background: tokens.color.surface.line, margin: '0 3px' }} />
-                      <IconBtn icon="sliders" title="Réglages (orateurs, durées)" onClick={() => setSettings(name)} />
-                      {decksPath && <IconCopy icon="folder" title="Copier le chemin du dossier" text={`${decksPath}/${name}`} />}
-                      <IconBtn icon="pencil" title="Renommer" onClick={() => setModal({ kind: 'rename', name })} />
-                      <IconBtn icon="copy" title="Dupliquer" onClick={() => setModal({ kind: 'duplicate', name })} />
-                      <span style={{ flex: 1 }} />
-                      <IconBtn icon="trash" title="Supprimer" danger onClick={() => setModal({ kind: 'delete', name })} />
-                    </>}
+                  <div style={{ display: 'flex', gap: 2, alignItems: 'center', marginTop: 2 }}>
+                    <CopyBtn text={`${origin}/${name}`} label="Copier le lien" tip="Copie l'adresse de la scène à envoyer au public" />
+                    <IconBtn icon="external" title="Ouvrir dans un nouvel onglet" href={`${origin}/${name}`} />
+                    <span style={{ flex: 1 }} />
+                    {canEdit && (
+                      <ManageMenu items={[
+                        { icon: 'sliders', label: 'Réglages (orateurs, durées)', onClick: () => setSettings(name) },
+                        { icon: 'pencil', label: 'Renommer', onClick: () => setModal({ kind: 'rename', name }) },
+                        { icon: 'copy', label: 'Dupliquer', onClick: () => setModal({ kind: 'duplicate', name }) },
+                        ...(decksPath ? [{ icon: 'folder', label: 'Copier le chemin du dossier', onClick: () => { void navigator.clipboard?.writeText(`${decksPath}/${name}`) } }] : []),
+                        { icon: 'trash', label: 'Supprimer', danger: true, onClick: () => setModal({ kind: 'delete', name }) },
+                      ]} />
+                    )}
                   </div>
                 </div>
               </div>
@@ -343,15 +360,103 @@ const linkBtn: React.CSSProperties = { background: 'none', border: 'none', paddi
 const iconLink: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, borderRadius: 9, border: `1px solid ${tokens.color.surface.line}`, color: tokens.color.text.secondary, textDecoration: 'none', cursor: 'pointer' }
 const iconBox: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', textDecoration: 'none' }
 
+// Tooltip CSS instantané (data-tip) — remplace l'attribut title natif (lent, absent au tactile).
+const HUB_CSS = `
+.hub-ic{transition:background .12s} .hub-ic:hover{background:rgba(0,0,0,0.07)}
+[data-tip]{position:relative}
+[data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(3px);width:max-content;max-width:240px;padding:7px 10px;border-radius:8px;background:#111;color:#fff;font:500 12px/1.4 ${SANS};text-align:left;white-space:normal;pointer-events:none;opacity:0;transition:opacity .12s,transform .12s;z-index:50;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+[data-tip]:hover::after,[data-tip]:focus-visible::after{opacity:1;transform:translateX(-50%) translateY(0)}
+[data-tip-end]::after{left:auto;right:0;transform:translateY(3px)} [data-tip-end]:hover::after,[data-tip-end]:focus-visible::after{transform:translateY(0)}
+.hub-menu-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border:none;background:none;border-radius:8px;cursor:pointer;font:600 13px ${SANS};color:${tokens.color.text.primary};text-align:left;text-decoration:none;box-sizing:border-box}
+.hub-menu-item:hover{background:rgba(0,0,0,0.06)}
+`
+
+// Bouton d'action avec libellé visible (+ icône) et tooltip explicatif.
+function Action({ icon, label, tip, onClick, href, primary, tipEnd }: { icon: string; label: string; tip: string; onClick?: () => void; href?: string; primary?: boolean; tipEnd?: boolean }) {
+  const style: React.CSSProperties = {
+    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '9px 10px', borderRadius: 9, textDecoration: 'none', cursor: 'pointer',
+    fontFamily: SANS, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
+    background: primary ? tokens.color.text.primary : 'transparent', color: primary ? tokens.color.surface.base : tokens.color.text.primary,
+    border: primary ? 'none' : `1px solid ${tokens.color.surface.line}`,
+  }
+  const props = { 'data-tip': tip, ...(tipEnd ? { 'data-tip-end': '' } : {}), 'aria-label': `${label} — ${tip}`, className: primary ? undefined : 'hub-ic', style }
+  const inner = <><Icon name={icon} size={14} /> {label}</>
+  return href ? <a href={href} {...props}>{inner}</a> : <button onClick={onClick} {...props}>{inner}</button>
+}
+
 function IconBtn({ icon, title, onClick, href, danger }: { icon: string; title: string; onClick?: () => void; href?: string; danger?: boolean }) {
   const style = { ...iconBox, color: danger ? tokens.color.semantic.critical : tokens.color.text.muted }
   return href
-    ? <a className="hub-ic" href={href} target="_blank" rel="noreferrer" title={title} style={style}><Icon name={icon} size={16} /></a>
-    : <button className="hub-ic" onClick={onClick} title={title} style={style}><Icon name={icon} size={16} /></button>
+    ? <a className="hub-ic" href={href} target="_blank" rel="noreferrer" data-tip={title} aria-label={title} style={style}><Icon name={icon} size={16} /></a>
+    : <button className="hub-ic" onClick={onClick} data-tip={title} aria-label={title} style={style}><Icon name={icon} size={16} /></button>
 }
 
-function IconCopy({ icon, title, text }: { icon: string; title: string; text: string }) {
+// Copie dans le presse-papiers avec retour visuel (« Copié ! »).
+function CopyBtn({ text, label, tip, icon = 'link' }: { text: string; label: string; tip: string; icon?: string }) {
   const [done, setDone] = useState(false)
   const copy = async () => { try { await navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 1400) } catch { /* ignore */ } }
-  return <button className="hub-ic" onClick={copy} title={title} style={{ ...iconBox, color: done ? tokens.color.semantic.success : tokens.color.text.muted }}><Icon name={done ? 'check' : icon} size={16} /></button>
+  return (
+    <button className="hub-ic" onClick={copy} data-tip={tip} aria-label={`${label} — ${tip}`}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 9px', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: SANS, fontSize: 12, fontWeight: 600, color: done ? tokens.color.semantic.success : tokens.color.text.secondary }}>
+      <Icon name={done ? 'check' : icon} size={14} /> {done ? 'Copié !' : label}
+    </button>
+  )
+}
+
+// Menu « Gérer » : toutes les actions d'édition regroupées, avec libellés.
+function ManageMenu({ items }: { items: { icon: string; label: string; onClick: () => void; danger?: boolean }[] }) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
+    window.addEventListener('click', close); window.addEventListener('keydown', onKey)
+    return () => { window.removeEventListener('click', close); window.removeEventListener('keydown', onKey) }
+  }, [open])
+  return (
+    <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+      <button className="hub-ic" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}
+        data-tip={open ? undefined : 'Réglages, renommer, dupliquer, supprimer…'} data-tip-end=""
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, border: 'none', background: open ? 'rgba(0,0,0,0.07)' : 'transparent', cursor: 'pointer', fontFamily: SANS, fontSize: 12, fontWeight: 600, color: tokens.color.text.secondary }}>
+        <Icon name="more" size={15} /> Gérer
+      </button>
+      {open && (
+        <div role="menu" style={{ position: 'absolute', right: 0, bottom: 'calc(100% + 6px)', width: 270, padding: 6, borderRadius: 12, background: tokens.color.surface.base, border: `1px solid ${tokens.color.surface.line}`, boxShadow: '0 10px 30px rgba(0,0,0,0.18)', zIndex: 60 }}>
+          {items.map((it, i) => (
+            <button key={it.label} role="menuitem" className="hub-menu-item" onClick={() => { setOpen(false); it.onClick() }}
+              style={{ color: it.danger ? tokens.color.semantic.critical : undefined, ...(it.danger && i > 0 ? { marginTop: 4, borderTop: `1px solid ${tokens.color.surface.line}`, borderRadius: '0 0 8px 8px' } : {}) }}>
+              <Icon name={it.icon} size={15} /> {it.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Bandeau « Comment ça marche » : explique le parcours scène → régie → téléphone.
+const STEPS = [
+  { icon: 'play', title: 'Présenter', text: 'Ouvre la scène en plein écran : c\'est ce que voit le public (projecteur).' },
+  { icon: 'monitor', title: 'Régie', text: 'Sur ton ordi : aperçus, notes, chrono, timeline et un QR code pour piloter.' },
+  { icon: 'smartphone', title: 'Téléphone', text: 'Chaque orateur scanne le QR de la régie et pilote ; le relais est automatique.' },
+]
+function HowItWorks({ onClose }: { onClose: () => void }) {
+  return (
+    <div style={{ position: 'relative', marginBottom: 24, padding: '16px 44px 16px 18px', borderRadius: 14, background: tokens.color.surface.base, border: `1px solid ${tokens.color.surface.line}` }}>
+      <div style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', color: tokens.color.text.muted, marginBottom: 12 }}>Comment ça marche</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 16 }}>
+        {STEPS.map((s, i) => (
+          <div key={s.title} style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 9, background: tokens.color.surface.subtle, display: 'flex', alignItems: 'center', justifyContent: 'center', color: tokens.color.text.primary }}><Icon name={s.icon} size={16} /></div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: tokens.color.text.primary }}>{i + 1}. {s.title}</div>
+              <div style={{ fontSize: 13, lineHeight: 1.45, color: tokens.color.text.secondary, marginTop: 2 }}>{s.text}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button className="hub-ic" onClick={onClose} aria-label="Masquer l'aide" data-tip="Masquer (réaffichable via « Aide »)" data-tip-end=""
+        style={{ ...iconBox, position: 'absolute', top: 10, right: 10, color: tokens.color.text.muted }}><Icon name="x" size={15} /></button>
+    </div>
+  )
 }
