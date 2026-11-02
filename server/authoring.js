@@ -114,7 +114,12 @@ export async function handleAuthoring(req, res) {
       const port = process.env.HUB_PORT || '5173'
       try {
         await exec(`docker rm -f ${TUNNEL_CONTAINER}`).catch(() => {})
-        await exec(`docker run -d --name ${TUNNEL_CONTAINER} --network host cloudflare/cloudflared:latest tunnel --no-autoupdate --url http://localhost:${port}`)
+        // Linux : réseau hôte. Docker Desktop (Windows/macOS) : `--network host` n'atteint pas
+        // la machine → on passe par host.docker.internal.
+        const linux = process.platform === 'linux'
+        const net = linux ? '--network host' : ''
+        const target = linux ? `http://localhost:${port}` : `http://host.docker.internal:${port}`
+        await exec(`docker run -d --name ${TUNNEL_CONTAINER} ${net} cloudflare/cloudflared:latest tunnel --no-autoupdate --url ${target}`)
       } catch (e) { send(res, 500, { error: 'Docker indisponible : ' + String(e?.message || e) }); return true }
       let turl = null
       for (let i = 0; i < 30 && !turl; i++) {

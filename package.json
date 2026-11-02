@@ -1,5 +1,5 @@
 {
-  "name": "react-slide-engine",
+  "name": "slide-hub",
   "version": "1.0.0",
   "description": "Moteur de présentation React minimaliste avec navigation clavier, animations Framer-motion et design system tokenisé.",
   "keywords": ["react", "presentation", "slides", "framer-motion", "vite", "typescript"],

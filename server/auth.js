@@ -17,7 +17,8 @@ const COOKIE = 'sid'
 // Mot de passe par défaut en local (aucune config). À surcharger en prod via env.
 const PASSWORD = process.env.PRESENTER_PASSWORD || 'demo'
 // Clé HMAC dérivée du secret (sépare la signature des tokens du mot de passe brut).
-const HMAC_KEY = crypto.createHash('sha256').update(`hmac:${PASSWORD}`).digest()
+// Si seul le hash est fourni, on dérive de lui (jamais du défaut « demo » public).
+const HMAC_KEY = crypto.createHash('sha256').update(`hmac:${process.env.PRESENTER_PASSWORD_SHA256 || PASSWORD}`).digest()
 
 const sha256 = (s) => crypto.createHash('sha256').update(String(s)).digest()
 const b64url = (buf) => Buffer.from(buf).toString('base64url')
@@ -67,7 +68,15 @@ export function isAdmin(req) {
 }
 
 // Connexion depuis la machine locale (utilisé pour l'auto-admin en dev).
+// Un tunnel/reverse-proxy se connecte lui aussi depuis la machine : on exige donc
+// une requête réellement locale (pas d'en-têtes de relais, Host = localhost)
+// et aucun tunnel public actif.
 export function isLocalReq(req) {
+  if (_tunnelUrl) return false
+  const h = req.headers
+  if (h['x-forwarded-for'] || h['x-forwarded-host'] || h['cf-connecting-ip'] || h['cf-ray'] || h.forwarded) return false
+  const host = (h.host || '').replace(/:\d+$/, '')
+  if (!/^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/.test(host)) return false
   const a = req.socket.remoteAddress || ''
   return a === '::1' || a.startsWith('127.') || a === '::ffff:127.0.0.1'
 }

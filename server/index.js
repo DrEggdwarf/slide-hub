@@ -15,6 +15,13 @@ import { fileURLToPath } from 'node:url'
 import { attachHub } from './hub.js'
 import { handleUnlock, isAdmin, reachableOrigin } from './auth.js'
 
+const pw = process.env.PRESENTER_PASSWORD
+if (!process.env.PRESENTER_PASSWORD_SHA256 && (!pw || ['demo', 'change-moi'].includes(pw))) {
+  console.error('PRESENTER_PASSWORD manquant (ou valeur par défaut) : définis un vrai mot de passe.')
+  console.error('  → npm run password -- "monsecret"   ou   PRESENTER_PASSWORD=… npm start')
+  process.exit(1)
+}
+
 const DIST = fileURLToPath(new URL('../dist', import.meta.url))
 const PORT = Number(process.env.PORT || 3000)
 const API_TARGET = process.env.API_PROXY_TARGET ? new URL(process.env.API_PROXY_TARGET) : null

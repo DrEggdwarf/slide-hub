@@ -11,7 +11,7 @@ git clone https://github.com/DrEggdwarf/slide-hub.git && cd slide-hub && npm ins
 - `http://localhost:5173/` → index du hub (liste des decks)
 - `http://localhost:5173/<deck>` → la prez (en local, `localhost` est admin automatiquement)
 
-Autres commandes : `npm run build` · `npm start` (serveur de prod) · `npm run password -- "monsecret"` · `npm run typecheck`.
+Autres commandes : `npm run build` · `npm start` (serveur de prod, exige un mot de passe : `npm run password -- "monsecret"` d'abord) · `npm run password -- "monsecret"` · `npm run typecheck`.
 
 ## Créer un deck
 
