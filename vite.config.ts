@@ -2,9 +2,12 @@ import './server/env.js' // charge .env AVANT auth.js (mot de passe régie)
 import { defineConfig, type PluginOption } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { attachHub } from './server/hub.js'
 import { handleUnlock, isAdmin, isLocalReq, reachableOrigin, signToken, COOKIE, TTL_MS } from './server/auth.js'
 import { handleAuthoring } from './server/authoring.js'
+
+const root = fileURLToPath(new URL('.', import.meta.url))
 
 // En dev, on branche EXACTEMENT le même hub/serveur qu'en prod, plus :
 //  - POST /unlock (déverrouillage par mot de passe)
@@ -37,9 +40,9 @@ export default defineConfig({
   // Alias pour que les slides de deck importent proprement le moteur partagé.
   resolve: {
     alias: {
-      '@engine': resolve(__dirname, 'src/engine'),
-      '@ui': resolve(__dirname, 'src/ui'),
-      '@design': resolve(__dirname, 'src/design'),
+      '@engine': resolve(root, 'src/engine'),
+      '@ui': resolve(root, 'src/ui'),
+      '@design': resolve(root, 'src/design'),
     },
   },
   server: {

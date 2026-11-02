@@ -2,7 +2,11 @@
 
 Un moteur de présentation React **partagé**, qui sert **plusieurs decks** depuis un seul projet. Slides en vrai TSX (animations, composants custom), pilotage temps réel (scène + console + téléphones), visibilité publique/privée par deck. Un deck = un dossier.
 
+![Le hub : liste des decks, recherche, actions](docs/hub.png)
+
 ## Démarrer (une commande)
+
+Prérequis : **Node 20.19+** (ou 22.12+). Docker est facultatif (partage internet, déploiement).
 
 ```bash
 git clone https://github.com/DrEggdwarf/slide-hub.git && cd slide-hub && npm install && npm run dev
@@ -10,6 +14,8 @@ git clone https://github.com/DrEggdwarf/slide-hub.git && cd slide-hub && npm ins
 
 - `http://localhost:5173/` → index du hub (liste des decks)
 - `http://localhost:5173/<deck>` → la prez (en local, `localhost` est admin automatiquement)
+
+![La régie présentateur : aperçus, notes, chrono et QR de pilotage](docs/regie.png)
 
 Autres commandes : `npm run build` · `npm start` (serveur de prod, exige un mot de passe : `npm run password -- "monsecret"` d'abord) · `npm run password -- "monsecret"` · `npm run typecheck`.
 
@@ -44,7 +50,12 @@ Une slide importe le moteur via les alias `@engine` / `@ui` / `@design`. **Rien 
 
 L'index `/` est un **tableau de bord** (en mode admin/local) : cartes avec miniatures live, et pour chaque deck — **Présenter / Régie**, copier le **lien** ou le **chemin du dossier**, **Réglages** (orateurs + couleurs, durée et orateur par slide), **Renommer / Dupliquer / Supprimer**, bascule **public / privé**, et **+ Nouveau deck**. Ces actions écrivent dans `decks/` (mode authoring **local** ; le hub déployé reste en lecture seule). Slides toujours éditées en TSX dans ton éditeur.
 
-Header : bouton **« Exposer sur internet »** = lance un tunnel Cloudflare (≠ visibilité public/privé d'un deck) → liens et QR basculent sur l'URL publique.
+Le tableau de bord propose aussi :
+- **Recherche et tri** (nom, ou « modifié récemment ») dès 4 decks.
+- **Modèles** à la création : « Présentation type » (titre, plan, 3 sections, conclusion) ou « Vide ».
+- **Corbeille** : un deck supprimé va dans `decks/.trash` et se restaure depuis le bouton « Corbeille ».
+- **Export PDF** (icône ↓ de chaque carte, ou `/<deck>/print`) : toutes les slides, dans leur état final → « Imprimer / Enregistrer en PDF » (marges « Aucune », graphiques d'arrière-plan cochés).
+- **« Partager sur internet »** : tunnel Cloudflare (≠ visibilité public/privé d'un deck) → liens et QR basculent sur l'URL publique. Une confirmation liste ce qui devient accessible ; le lien se **coupe automatiquement** après 4 h (`TUNNEL_TTL_HOURS`) ou à l'arrêt du serveur ; il est **refusé tant que le mot de passe est celui par défaut** (`npm run password -- "monsecret"`).
 
 ## Routes & pilotage
 
@@ -52,7 +63,8 @@ Header : bouton **« Exposer sur internet »** = lance un tunnel Cloudflare (≠
 |-------|------|
 | `/` | index du hub |
 | `/<deck>` | scène (projection) |
-| `/<deck>/console` | régie présentateur (aperçus, notes, chrono, timeline) |
+| `/<deck>/console` | régie présentateur (aperçus, notes, chrono, timeline, QR de pilotage) |
+| `/<deck>/print` | export PDF (toutes les slides) |
 | `/<deck>/pilote?t=<token>` | régie mobile (téléphone) |
 
 Pilotage : la scène se déverrouille avec le **mot de passe** (panneau `h`) → un **QR** apparaît → les orateurs le scannent et pilotent (relais auto). L'état vit côté serveur, synchro WebSocket, **séparé par deck**.

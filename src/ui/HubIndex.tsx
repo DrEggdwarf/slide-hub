@@ -26,6 +26,10 @@ const PATHS: Record<string, string> = {
   smartphone: '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
   help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
   x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  restore: '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+  search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  alert: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
 }
 function Icon({ name, size = 17 }: { name: string; size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={name === 'play' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: PATHS[name] }} />
@@ -63,7 +67,7 @@ async function api(method: string, path: string, body?: object): Promise<{ ok: b
 type Modal = { kind: 'create' | 'rename' | 'duplicate' | 'delete'; name?: string }
 
 export function HubIndex({ notFound }: { notFound?: string }) {
-  const names = deckNames()
+  const allNames = deckNames()
   const [authoring, setAuthoring] = useState(false)
   const [admin, setAdmin] = useState(false)
   const [modal, setModal] = useState<Modal | null>(null)
@@ -72,13 +76,21 @@ export function HubIndex({ notFound }: { notFound?: string }) {
   const [decksPath, setDecksPath] = useState('')
   const [tunnel, setTunnel] = useState<string | null>(null)
   const [tunnelBusy, setTunnelBusy] = useState(false)
+  const [tunnelExpires, setTunnelExpires] = useState<number | null>(null)
+  const [confirmTunnel, setConfirmTunnel] = useState(false)
+  const [customPassword, setCustomPassword] = useState(true)
+  const [mtimes, setMtimes] = useState<Record<string, number>>({})
+  const [trashCount, setTrashCount] = useState(0)
+  const [trashOpen, setTrashOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState<'name' | 'recent'>('name')
   const [help, setHelp] = useState(() => { try { return localStorage.getItem('hub-help') !== 'hidden' } catch { return true } })
   const setHelpPersist = (v: boolean) => { setHelp(v); try { localStorage.setItem('hub-help', v ? 'shown' : 'hidden') } catch { /* ignore */ } }
 
   useEffect(() => {
-    fetch('/authoring/ping').then((r) => r.ok ? r.json() : null).then((d) => { setAuthoring(!!d?.authoring); setDecksPath(d?.decksPath || '') }).catch(() => {})
+    fetch('/authoring/ping').then((r) => r.ok ? r.json() : null).then((d) => { setAuthoring(!!d?.authoring); setDecksPath(d?.decksPath || ''); setMtimes(d?.mtimes || {}); setTrashCount(d?.trash || 0); setCustomPassword(d?.customPassword !== false) }).catch(() => {})
     fetch('/whoami').then((r) => r.json()).then((d) => { setAdmin(!!d.admin); if (d.origin) setOrigin(d.origin) }).catch(() => {})
-    fetch('/authoring/tunnel').then((r) => r.ok ? r.json() : null).then((d) => setTunnel(d?.url || null)).catch(() => {})
+    fetch('/authoring/tunnel').then((r) => r.ok ? r.json() : null).then((d) => { setTunnel(d?.url || null); setTunnelExpires(d?.expiresAt ?? null) }).catch(() => {})
   }, [])
 
   const startTunnel = async () => {
@@ -90,6 +102,14 @@ export function HubIndex({ notFound }: { notFound?: string }) {
   }
   const stopTunnel = async () => { setTunnelBusy(true); await fetch('/authoring/tunnel/stop', { method: 'POST' }); location.reload() }
   const canEdit = authoring && admin
+
+  // Recherche + tri (le tri « récent » n'existe qu'en mode authoring : le serveur fournit les dates).
+  const hasMtimes = Object.keys(mtimes).length > 0
+  const q = query.trim().toLowerCase()
+  const names = allNames
+    .filter((n) => { if (!q) return true; const c = deckConfig(n); return [n, c?.title, c?.brand].some((v) => v?.toLowerCase().includes(q)) })
+    .sort((a, b) => (sort === 'recent' && hasMtimes ? (mtimes[b] ?? 0) - (mtimes[a] ?? 0) : 0) || a.localeCompare(b))
+  const tunnelDecks = allNames.map((n) => ({ name: n, label: deckConfig(n)?.title ?? deckConfig(n)?.brand ?? n, pub: deckConfig(n)?.visibility === 'public' }))
 
   const toggle = async (name: string, cur?: string) => {
     const r = await api('PATCH', `/deck/${name}`, { visibility: cur === 'public' ? 'private' : 'public' })
@@ -112,15 +132,21 @@ export function HubIndex({ notFound }: { notFound?: string }) {
                 <Icon name="help" size={16} /> Aide
               </button>
             )}
+            {canEdit && trashCount > 0 && (
+              <button className="hub-ic" onClick={() => setTrashOpen(true)} data-tip="Decks supprimés : les restaurer" data-tip-end=""
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 12px', borderRadius: 12, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: SANS, fontSize: 14, fontWeight: 600, color: tokens.color.text.secondary }}>
+                <Icon name="restore" size={16} /> Corbeille ({trashCount})
+              </button>
+            )}
             {canEdit && (tunnel ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px 6px 12px', borderRadius: 12, background: `${tokens.color.semantic.success}14`, border: `1px solid ${tokens.color.semantic.success}55` }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: tokens.color.semantic.success }} />
-                <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: tokens.color.text.secondary }}>En ligne</span>
+                <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: tokens.color.text.secondary }}>En ligne{tunnelExpires ? <span style={{ fontWeight: 500, color: tokens.color.text.muted }}> · coupure auto à {new Date(tunnelExpires).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span> : null}</span>
                 <CopyBtn text={tunnel} label="Copier l'URL publique" tip="Lien internet à envoyer : fonctionne partout, y compris en 4G" icon="globe" />
                 <button onClick={stopTunnel} disabled={tunnelBusy} data-tip="Coupe le lien internet : le hub redevient accessible seulement sur ton réseau" data-tip-end="" style={{ ...linkBtn, fontFamily: SANS, fontSize: 12, padding: '6px 6px' }}>Arrêter</button>
               </div>
             ) : (
-              <button onClick={startTunnel} disabled={tunnelBusy} data-tip="Crée un lien internet temporaire (tunnel Cloudflare) pour que des personnes hors de ton réseau accèdent au hub. Sans rapport avec public / privé." data-tip-end=""
+              <button onClick={() => setConfirmTunnel(true)} disabled={tunnelBusy} data-tip="Crée un lien internet temporaire (tunnel Cloudflare) pour que des personnes hors de ton réseau accèdent au hub. Sans rapport avec public / privé." data-tip-end=""
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '11px 16px', borderRadius: 12, border: `1px solid ${tokens.color.surface.line}`, background: 'transparent', color: tokens.color.text.secondary, fontFamily: SANS, fontSize: 14, fontWeight: 600, cursor: tunnelBusy ? 'default' : 'pointer' }}>
                 <Icon name="globe" size={15} /> {tunnelBusy ? 'Démarrage…' : 'Partager sur internet'}
               </button>
@@ -138,8 +164,23 @@ export function HubIndex({ notFound }: { notFound?: string }) {
         {notFound && <div style={{ fontFamily: MONO, fontSize: 13, color: tokens.color.semantic.critical, marginBottom: 16 }}>Deck « {notFound} » introuvable.</div>}
         {!canEdit && <div style={{ fontFamily: MONO, fontSize: 11, color: tokens.color.text.muted, marginBottom: 16 }}>Mode lecture seule — {authoring ? 'ouvre une scène et entre le mot de passe (touche h) pour pouvoir gérer.' : "la création et l'édition des decks sont disponibles en local (npm run dev)."}</div>}
 
+        {allNames.length >= 4 && (
+          <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+            <label style={{ flex: '1 1 240px', maxWidth: 380, display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', borderRadius: 10, border: `1px solid ${tokens.color.surface.line}`, background: tokens.color.surface.base, color: tokens.color.text.muted }}>
+              <Icon name="search" size={15} />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un deck…" aria-label="Rechercher un deck"
+                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', padding: '10px 0', fontFamily: SANS, fontSize: 14, color: tokens.color.text.primary }} />
+            </label>
+            <select value={sort} onChange={(e) => setSort(e.target.value as 'name' | 'recent')} aria-label="Trier les decks"
+              style={{ padding: '10px 12px', borderRadius: 10, border: `1px solid ${tokens.color.surface.line}`, background: tokens.color.surface.base, fontFamily: SANS, fontSize: 14, color: tokens.color.text.secondary }}>
+              <option value="name">Trier : nom</option>
+              {hasMtimes && <option value="recent">Trier : modifié récemment</option>}
+            </select>
+          </div>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 22 }}>
-          {names.length === 0 && <div style={{ color: tokens.color.text.muted }}>Aucun deck. {canEdit ? 'Clique « Nouveau deck ».' : 'Ajoute un dossier dans decks/.'}</div>}
+          {names.length === 0 && <div style={{ color: tokens.color.text.muted }}>{allNames.length > 0 ? `Aucun deck ne correspond à « ${query} ».` : <>Aucun deck. {canEdit ? 'Clique « Nouveau deck ».' : 'Ajoute un dossier dans decks/.'}</>}</div>}
           {names.map((name) => {
             const cfg = deckConfig(name)
             const pub = cfg?.visibility === 'public'
@@ -162,6 +203,7 @@ export function HubIndex({ notFound }: { notFound?: string }) {
                   <div style={{ display: 'flex', gap: 2, alignItems: 'center', marginTop: 2 }}>
                     <CopyBtn text={`${origin}/${name}`} label="Copier le lien" tip="Copie l'adresse de la scène à envoyer au public" />
                     <IconBtn icon="external" title="Ouvrir dans un nouvel onglet" href={`${origin}/${name}`} />
+                    <IconBtn icon="download" title="Exporter en PDF : ouvre la vue d'impression" href={`/${name}/print`} />
                     <span style={{ flex: 1 }} />
                     {canEdit && (
                       <ManageMenu items={[
@@ -181,6 +223,8 @@ export function HubIndex({ notFound }: { notFound?: string }) {
       </div>
 
       {modal && <DeckModal modal={modal} onClose={() => setModal(null)} />}
+      {confirmTunnel && <TunnelConfirm decks={tunnelDecks} customPassword={customPassword} busy={tunnelBusy} onCancel={() => setConfirmTunnel(false)} onConfirm={() => { setConfirmTunnel(false); void startTunnel() }} />}
+      {trashOpen && <TrashModal onClose={() => setTrashOpen(false)} />}
       {settings && <SettingsModal name={settings} origin={origin} onClose={() => setSettings(null)} />}
     </div>
   )
@@ -298,6 +342,7 @@ function DeckModal({ modal, onClose }: { modal: Modal; onClose: () => void }) {
   const { kind, name } = modal
   const isDelete = kind === 'delete'
   const [val, setVal] = useState(kind === 'rename' ? name ?? '' : kind === 'duplicate' ? `${name}-copie` : '')
+  const [template, setTemplate] = useState<'talk' | 'blank'>('talk')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -314,7 +359,7 @@ function DeckModal({ modal, onClose }: { modal: Modal; onClose: () => void }) {
     if (!valid || busy) return
     setBusy(true); setErr('')
     let r
-    if (kind === 'create') r = await api('POST', '/deck', { name: val })
+    if (kind === 'create') r = await api('POST', '/deck', { name: val, template })
     else if (kind === 'rename') r = await api('POST', `/deck/${name}/rename`, { to: val })
     else if (kind === 'duplicate') r = await api('POST', `/deck/${name}/duplicate`, { to: val })
     else r = await api('DELETE', `/deck/${name}`)
@@ -337,6 +382,17 @@ function DeckModal({ modal, onClose }: { modal: Modal; onClose: () => void }) {
             <div style={{ marginTop: 7, fontFamily: MONO, fontSize: 11, color: val && !valid ? tokens.color.semantic.critical : tokens.color.text.muted }}>
               minuscules, chiffres et tirets — sert d'URL : /{val || 'nom-du-deck'}
             </div>
+            {kind === 'create' && (
+              <div role="radiogroup" aria-label="Modèle" style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {([['talk', 'Présentation type', '6 slides prêtes : titre, plan, 3 sections, conclusion'], ['blank', 'Vide', 'Une seule slide à modifier']] as const).map(([id, label, text]) => (
+                  <button key={id} role="radio" aria-checked={template === id} onClick={() => setTemplate(id)}
+                    style={{ display: 'flex', flexDirection: 'column', gap: 2, textAlign: 'left', padding: '10px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: SANS, border: `1.5px solid ${template === id ? tokens.color.text.primary : tokens.color.surface.line}`, background: template === id ? tokens.color.surface.subtle : 'transparent' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: tokens.color.text.primary }}>{label}</span>
+                    <span style={{ fontSize: 12, color: tokens.color.text.muted }}>{text}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </>
         )}
         {err && <div style={{ marginTop: 8, fontFamily: MONO, fontSize: 12, color: tokens.color.semantic.critical }}>{err}</div>}
@@ -434,6 +490,91 @@ function ManageMenu({ items }: { items: { icon: string; label: string; onClick: 
   )
 }
 
+// Fenêtre modale générique (clic sur le fond ou Échap = fermer).
+function Overlay({ onClose, children, width = 440 }: { onClose: () => void; children: React.ReactNode; width?: number }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  return (
+    <div onClick={onClose} role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, background: 'rgba(10,10,10,0.45)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: width, maxHeight: '90vh', overflow: 'auto', background: tokens.color.surface.base, borderRadius: 16, padding: '24px 24px 20px', boxShadow: '0 24px 64px rgba(0,0,0,0.22)' }}>{children}</div>
+    </div>
+  )
+}
+const ghostBtn: React.CSSProperties = { padding: '10px 16px', borderRadius: 10, border: `1px solid ${tokens.color.surface.line}`, background: 'transparent', color: tokens.color.text.secondary, fontFamily: SANS, fontSize: 14, fontWeight: 600, cursor: 'pointer' }
+const solidBtn = (enabled = true): React.CSSProperties => ({ padding: '10px 18px', borderRadius: 10, border: 'none', cursor: enabled ? 'pointer' : 'default', fontFamily: SANS, fontSize: 14, fontWeight: 700, color: tokens.color.surface.base, background: enabled ? tokens.color.text.primary : tokens.color.surface.line })
+
+// Confirmation avant d'ouvrir le hub sur internet : dit clairement ce qui devient accessible.
+function TunnelConfirm({ decks, customPassword, busy, onCancel, onConfirm }: { decks: { name: string; label: string; pub: boolean }[]; customPassword: boolean; busy: boolean; onCancel: () => void; onConfirm: () => void }) {
+  const pubs = decks.filter((d) => d.pub), privs = decks.filter((d) => !d.pub)
+  const row = (label: string, list: typeof decks, color: string) => list.length > 0 && (
+    <div style={{ fontSize: 13, color: tokens.color.text.secondary, lineHeight: 1.5 }}>
+      <b style={{ color }}>{label}</b> {list.map((d) => d.label).join(', ')}
+    </div>
+  )
+  return (
+    <Overlay onClose={onCancel}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: tokens.color.text.primary }}>Partager sur internet ?</div>
+      <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.5, color: tokens.color.text.secondary }}>
+        Un lien public <code>https://….trycloudflare.com</code> va être créé : toute personne qui le possède pourra ouvrir ce hub, même hors de ton réseau.
+      </div>
+      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 14px', borderRadius: 10, background: tokens.color.surface.subtle }}>
+        {row('Visibles par tous :', pubs, tokens.color.semantic.success)}
+        {row('Protégés par mot de passe :', privs, tokens.color.text.primary)}
+        {decks.length === 0 && <span style={{ fontSize: 13, color: tokens.color.text.muted }}>Aucun deck pour le moment.</span>}
+      </div>
+      <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.5, color: tokens.color.text.muted }}>
+        Le lien se coupe tout seul après 4 h (réglable : <code>TUNNEL_TTL_HOURS</code>) ou quand tu arrêtes le serveur. Tu peux aussi l'arrêter à la main.
+      </div>
+      {!customPassword && (
+        <div style={{ marginTop: 14, display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 10, background: `${tokens.color.semantic.critical}12`, border: `1px solid ${tokens.color.semantic.critical}55`, color: tokens.color.semantic.critical, fontSize: 13, lineHeight: 1.5 }}>
+          <span style={{ flexShrink: 0, marginTop: 1 }}><Icon name="alert" size={16} /></span>
+          <span>Le mot de passe est celui par défaut (« demo ») : n'importe qui avec le lien pourrait se déverrouiller et gérer tes decks. Définis-en un puis relance : <code>npm run password -- "monsecret"</code></span>
+        </div>
+      )}
+      <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <button onClick={onCancel} style={ghostBtn}>Annuler</button>
+        <button onClick={onConfirm} disabled={!customPassword || busy} style={solidBtn(customPassword && !busy)}>Créer le lien public</button>
+      </div>
+    </Overlay>
+  )
+}
+
+// Corbeille : decks supprimés (decks/.trash) → restaurer.
+function TrashModal({ onClose }: { onClose: () => void }) {
+  const [entries, setEntries] = useState<{ id: string; name: string; deletedAt: number }[] | null>(null)
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState('')
+  useEffect(() => { fetch('/authoring/trash').then((r) => r.json()).then((d) => setEntries(d.entries ?? [])).catch(() => setErr('Chargement impossible')) }, [])
+  const restore = async (id: string) => {
+    setBusy(id); setErr('')
+    const r = await api('POST', `/trash/${id}/restore`)
+    if (r.ok) location.reload(); else { setErr(r.error || 'Échec'); setBusy('') }
+  }
+  return (
+    <Overlay onClose={onClose}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: tokens.color.text.primary }}>Corbeille</div>
+      <div style={{ marginTop: 6, fontSize: 13, color: tokens.color.text.muted }}>Les decks supprimés sont gardés dans <code>decks/.trash</code>.</div>
+      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {entries === null && !err && <span style={{ fontSize: 13, color: tokens.color.text.muted }}>Chargement…</span>}
+        {entries?.length === 0 && <span style={{ fontSize: 13, color: tokens.color.text.muted }}>La corbeille est vide.</span>}
+        {entries?.map((e) => (
+          <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, border: `1px solid ${tokens.color.surface.line}` }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: tokens.color.text.primary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</div>
+              <div style={{ fontSize: 12, color: tokens.color.text.muted }}>supprimé le {new Date(e.deletedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>
+            </div>
+            <button onClick={() => restore(e.id)} disabled={!!busy} style={{ ...ghostBtn, padding: '7px 12px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="restore" size={14} /> {busy === e.id ? '…' : 'Restaurer'}</button>
+          </div>
+        ))}
+      </div>
+      {err && <div style={{ marginTop: 10, fontFamily: MONO, fontSize: 12, color: tokens.color.semantic.critical }}>{err}</div>}
+      <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}><button onClick={onClose} style={ghostBtn}>Fermer</button></div>
+    </Overlay>
+  )
+}
+
 // Bandeau « Comment ça marche » : explique le parcours scène → régie → téléphone.
 const STEPS = [
   { icon: 'play', title: 'Présenter', text: 'Ouvre la scène en plein écran : c\'est ce que voit le public (projecteur).' },
@@ -454,6 +595,9 @@ function HowItWorks({ onClose }: { onClose: () => void }) {
             </div>
           </div>
         ))}
+      </div>
+      <div style={{ marginTop: 14, fontSize: 13, color: tokens.color.text.secondary }}>
+        Créer un deck : <b>+ Nouveau deck</b>, puis édite <code>decks/&lt;nom&gt;/slides/</code> (une slide = un fichier .tsx). <a href="https://github.com/DrEggdwarf/slide-hub#readme" target="_blank" rel="noreferrer" style={{ color: tokens.color.text.primary, fontWeight: 600 }}>Documentation ↗</a>
       </div>
       <button className="hub-ic" onClick={onClose} aria-label="Masquer l'aide" data-tip="Masquer (réaffichable via « Aide »)" data-tip-end=""
         style={{ ...iconBox, position: 'absolute', top: 10, right: 10, color: tokens.color.text.muted }}><Icon name="x" size={15} /></button>

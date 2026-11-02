@@ -9,6 +9,7 @@ import './design/globals.css'
 //   /                       → index du hub (liste des decks)
 //   /<deck>                 → scène (projection)        — gatée si deck privé
 //   /<deck>/console         → régie présentateur        — gatée si deck privé
+//   /<deck>/print           → export PDF (toutes les slides) — gaté si deck privé
 //   /<deck>/pilote?t=<tok>  → régie mobile               — gatée par token
 const parts = window.location.pathname.split('/').filter(Boolean)
 const deckName = parts[0]

@@ -20,6 +20,9 @@ const PASSWORD = process.env.PRESENTER_PASSWORD || 'demo'
 // Si seul le hash est fourni, on dérive de lui (jamais du défaut « demo » public).
 const HMAC_KEY = crypto.createHash('sha256').update(`hmac:${process.env.PRESENTER_PASSWORD_SHA256 || PASSWORD}`).digest()
 
+// Vrai si un mot de passe personnalisé est défini (≠ défaut public « demo » / exemple « change-moi »).
+export const hasCustomPassword = () => !!process.env.PRESENTER_PASSWORD_SHA256 || (!!process.env.PRESENTER_PASSWORD && !['demo', 'change-moi'].includes(process.env.PRESENTER_PASSWORD))
+
 const sha256 = (s) => crypto.createHash('sha256').update(String(s)).digest()
 const b64url = (buf) => Buffer.from(buf).toString('base64url')
 

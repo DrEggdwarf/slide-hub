@@ -5,15 +5,35 @@
 //  recharge après mutation (Vite re-globbe). NON exposée en prod (read-only).
 // ─────────────────────────────────────────────────────────────────────────
 import { fileURLToPath } from 'node:url'
-import { mkdir, writeFile, readFile, rename, cp, readdir, stat } from 'node:fs/promises'
+import { mkdir, writeFile, readFile, rename as fsRename, cp, rm, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { exec as execCb } from 'node:child_process'
+import { exec as execCb, execSync } from 'node:child_process'
 import { promisify } from 'node:util'
-import { isAdmin, setTunnelUrl, getTunnelUrl } from './auth.js'
+import { isAdmin, setTunnelUrl, getTunnelUrl, hasCustomPassword } from './auth.js'
 
 const exec = promisify(execCb)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-const TUNNEL_CONTAINER = 'slide-hub-tunnel'
+// Un conteneur par port : deux hubs sur la même machine ne se coupent pas mutuellement le tunnel.
+const tunnelName = () => `slide-hub-tunnel-${process.env.HUB_PORT || '5173'}`
+const TUNNEL_TTL_MS = Math.max(0.1, Number(process.env.TUNNEL_TTL_HOURS || 4)) * 3600_000
+let tunnelTimer = null
+let tunnelExpiresAt = null
+
+// Coupe le tunnel (conteneur + état) — appelé à l'arrêt manuel, à l'expiration et à la sortie du process.
+async function stopTunnel() {
+  clearTimeout(tunnelTimer); tunnelTimer = null; tunnelExpiresAt = null
+  await exec(`docker rm -f ${tunnelName()}`).catch(() => {})
+  setTunnelUrl(null)
+}
+// Ne laisse jamais un tunnel public derrière soi quand le serveur s'arrête (Ctrl+C, kill, fermeture du terminal).
+let exitHooked = false
+function hookExit() {
+  if (exitHooked) return
+  exitHooked = true
+  const cleanup = () => { try { execSync(`docker rm -f ${tunnelName()}`, { stdio: 'ignore' }) } catch { /* docker absent / déjà coupé */ } }
+  process.on('exit', cleanup)
+  for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { cleanup(); process.exit(0) })
+}
 
 const DECKS = fileURLToPath(new URL('../decks', import.meta.url))
 const TRASH = join(DECKS, '.trash')
@@ -48,8 +68,107 @@ export function Component(_: SlideContext) {
 }
 `
 
+// Slides du modèle « talk » (plan type d'une présentation de 10 à 15 min).
+const talkSlides = (name) => ({
+  '01-titre': `import type { SlideContext, SlideMeta } from '@engine/types'
+import { Eyebrow } from '@ui/Eyebrow'
+import { Headline } from '@ui/Headline'
+import { Lede } from '@ui/Lede'
+import { Stack } from '@ui/Stack'
+
+export const meta: SlideMeta = { title: 'Titre', speaker: ['moi'], duration: 45, notes: 'Accroche : une phrase, puis le plan.' }
+
+export function Component(_: SlideContext) {
+  return (
+    <Stack gap={20}>
+      <Eyebrow>Contexte · Date</Eyebrow>
+      <Headline size="xl">${name}</Headline>
+      <Lede>Une phrase d'accroche en une ligne.</Lede>
+    </Stack>
+  )
+}
+`,
+  '02-plan': `import type { SlideContext, SlideMeta } from '@engine/types'
+import { Eyebrow } from '@ui/Eyebrow'
+import { Headline } from '@ui/Headline'
+import { Stack } from '@ui/Stack'
+import { Reveal } from '@ui/Reveal'
+import { tokens } from '@design/tokens'
+
+export const meta: SlideMeta = { title: 'Plan', speaker: ['moi'], duration: 60, steps: 3, notes: 'Annonce les trois parties (→ pour les faire apparaître).' }
+
+const PARTS = ['Le problème', 'La solution', 'Et maintenant ?']
+
+export function Component({ step }: SlideContext) {
+  return (
+    <Stack gap={28} align="start" style={{ width: '100%', maxWidth: 820 }}>
+      <Eyebrow>Plan</Eyebrow>
+      <Headline size="lg" align="left">Trois parties</Headline>
+      <Stack gap={16} align="start">
+        {PARTS.map((p, i) => (
+          <Reveal key={p} show={step >= i + 1}>
+            <span style={{ fontSize: tokens.type.size.lg, color: tokens.color.text.secondary }}>{i + 1}. {p}</span>
+          </Reveal>
+        ))}
+      </Stack>
+    </Stack>
+  )
+}
+`,
+  '03-section-1': sectionSlide('Le problème', 'Décris le constat, avec un chiffre ou un exemple concret.'),
+  '04-section-2': sectionSlide('La solution', 'Montre comment ça marche, le plus simplement possible.'),
+  '05-section-3': sectionSlide('Et maintenant ?', 'Prochaines étapes, ce que tu attends du public.'),
+  '06-conclusion': `import type { SlideContext, SlideMeta } from '@engine/types'
+import { Eyebrow } from '@ui/Eyebrow'
+import { Headline } from '@ui/Headline'
+import { Lede } from '@ui/Lede'
+import { Stack } from '@ui/Stack'
+
+export const meta: SlideMeta = { title: 'Conclusion', speaker: ['moi'], duration: 45, notes: 'Une idée à retenir, puis les questions.' }
+
+export function Component(_: SlideContext) {
+  return (
+    <Stack gap={20}>
+      <Eyebrow>Conclusion</Eyebrow>
+      <Headline size="xl">Merci !</Headline>
+      <Lede>Des questions ?</Lede>
+    </Stack>
+  )
+}
+`,
+})
+function sectionSlide(title, text) {
+  return `import type { SlideContext, SlideMeta } from '@engine/types'
+import { Eyebrow } from '@ui/Eyebrow'
+import { Headline } from '@ui/Headline'
+import { Lede } from '@ui/Lede'
+import { Stack } from '@ui/Stack'
+
+export const meta: SlideMeta = { title: '${title}', speaker: ['moi'], duration: 120, notes: '${text}' }
+
+export function Component(_: SlideContext) {
+  return (
+    <Stack gap={20}>
+      <Eyebrow>Section</Eyebrow>
+      <Headline size="lg">${title}</Headline>
+      <Lede>${text}</Lede>
+    </Stack>
+  )
+}
+`
+}
+
 const send = (res, code, obj) => { res.statusCode = code; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(obj)) }
 const readJson = (req) => new Promise((r) => { let d = ''; req.on('data', (c) => { d += c; if (d.length > 16384) req.destroy() }); req.on('end', () => { try { r(JSON.parse(d || '{}')) } catch { r({}) } }); req.on('error', () => r({})) })
+// Déplace un dossier. Sous Windows, `rename` échoue (EPERM/EBUSY) tant que le serveur de dev surveille
+// le dossier : on retombe sur copie + suppression (avec nouvelles tentatives).
+async function rename(from, to) {
+  try { return await fsRename(from, to) } catch (e) {
+    if (!['EPERM', 'EBUSY', 'EXDEV', 'EACCES'].includes(e?.code)) throw e
+    await cp(from, to, { recursive: true })
+    await rm(from, { recursive: true, force: true, maxRetries: 8, retryDelay: 150 })
+  }
+}
 const exists = async (p) => { try { await stat(p); return true } catch { return false } }
 
 // ── Parsers / écritures (regex sur le format des templates) ──────────────
@@ -98,37 +217,76 @@ function setSlideMeta(src, { duration, speaker }) {
 export async function handleAuthoring(req, res) {
   const url = new URL(req.url || '/', 'http://localhost')
   if (!url.pathname.startsWith('/authoring/')) return false
-  if (url.pathname === '/authoring/ping') { send(res, 200, { authoring: true, decksPath: DECKS }); return true }
+  if (url.pathname === '/authoring/ping') {
+    const mtimes = {}
+    let trash = 0
+    try {
+      for (const d of await readdir(DECKS, { withFileTypes: true })) {
+        if (!d.isDirectory() || d.name.startsWith('.')) continue
+        let m = 0
+        const walk = async (dir) => { for (const e of await readdir(dir, { withFileTypes: true })) { const f = join(dir, e.name); if (e.isDirectory()) await walk(f); else m = Math.max(m, (await stat(f)).mtimeMs) } }
+        await walk(join(DECKS, d.name)); mtimes[d.name] = Math.round(m)
+      }
+      trash = (await readdir(TRASH).catch(() => [])).length
+    } catch { /* ignore */ }
+    send(res, 200, { authoring: true, decksPath: DECKS, mtimes, trash, customPassword: hasCustomPassword() }); return true
+  }
   if (!isAdmin(req)) { send(res, 403, { error: 'admin requis' }); return true }
 
   const parts = url.pathname.split('/').filter(Boolean) // authoring, deck, name, action, id
 
+  // ── Corbeille : liste / restauration des decks supprimés ────────────────
+  if (parts[1] === 'trash') {
+    if (req.method === 'GET') {
+      const entries = (await readdir(TRASH).catch(() => [])).map((id) => {
+        const m = id.match(/^(.*)-(\d{10,})$/)
+        return { id, name: m ? m[1] : id, deletedAt: m ? Number(m[2]) : 0 }
+      }).sort((a, b) => b.deletedAt - a.deletedAt)
+      send(res, 200, { entries }); return true
+    }
+    if (req.method === 'POST' && parts[3] === 'restore') {
+      const id = parts[2]
+      const m = id.match(/^([a-z0-9-]{1,40})-(\d{10,})$/)
+      if (!m || !(await exists(join(TRASH, id)))) { send(res, 404, { error: 'introuvable dans la corbeille' }); return true }
+      let target = m[1]
+      if (await exists(join(DECKS, target))) target = `${m[1]}-restaure`
+      if (await exists(join(DECKS, target))) { send(res, 409, { error: 'un deck du même nom existe déjà' }); return true }
+      await rename(join(TRASH, id), join(DECKS, target))
+      send(res, 200, { ok: true, name: target }); return true
+    }
+    send(res, 405, { error: 'méthode non gérée' }); return true
+  }
+
   // ── Tunnel public (cloudflared via Docker) : statut / start / stop ──────
   if (parts[1] === 'tunnel') {
-    if (req.method === 'GET') { send(res, 200, { url: getTunnelUrl() }); return true }
+    if (req.method === 'GET') { send(res, 200, { url: getTunnelUrl(), expiresAt: tunnelExpiresAt }); return true }
     if (req.method === 'POST' && parts[2] === 'stop') {
-      await exec(`docker rm -f ${TUNNEL_CONTAINER}`).catch(() => {})
-      setTunnelUrl(null); send(res, 200, { ok: true }); return true
+      await stopTunnel(); send(res, 200, { ok: true }); return true
     }
     if (req.method === 'POST' && parts[2] === 'start') {
+      if (!hasCustomPassword()) { send(res, 400, { error: 'Définis un mot de passe avant de partager (sinon « demo » donnerait la main à tout le monde) : npm run password -- "monsecret" puis relance npm run dev.' }); return true }
       const port = process.env.HUB_PORT || '5173'
       try {
-        await exec(`docker rm -f ${TUNNEL_CONTAINER}`).catch(() => {})
+        hookExit()
+        await exec(`docker rm -f ${tunnelName()}`).catch(() => {})
         // Linux : réseau hôte. Docker Desktop (Windows/macOS) : `--network host` n'atteint pas
         // la machine → on passe par host.docker.internal.
         const linux = process.platform === 'linux'
         const net = linux ? '--network host' : ''
         const target = linux ? `http://localhost:${port}` : `http://host.docker.internal:${port}`
-        await exec(`docker run -d --name ${TUNNEL_CONTAINER} ${net} cloudflare/cloudflared:latest tunnel --no-autoupdate --url ${target}`)
+        await exec(`docker run -d --name ${tunnelName()} ${net} cloudflare/cloudflared:latest tunnel --no-autoupdate --url ${target}`)
       } catch (e) { send(res, 500, { error: 'Docker indisponible : ' + String(e?.message || e) }); return true }
       let turl = null
       for (let i = 0; i < 30 && !turl; i++) {
         await sleep(1500)
-        const out = await exec(`docker logs ${TUNNEL_CONTAINER} 2>&1`).catch(() => ({ stdout: '', stderr: '' }))
+        const out = await exec(`docker logs ${tunnelName()} 2>&1`).catch(() => ({ stdout: '', stderr: '' }))
         turl = `${out.stdout || ''}${out.stderr || ''}`.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)?.[0] || null
       }
-      if (!turl) { await exec(`docker rm -f ${TUNNEL_CONTAINER}`).catch(() => {}); send(res, 504, { error: 'Tunnel non établi (réseau / image cloudflared ?)' }); return true }
-      setTunnelUrl(turl); send(res, 200, { url: turl }); return true
+      if (!turl) { await stopTunnel(); send(res, 504, { error: 'Tunnel non établi (réseau / image cloudflared ?)' }); return true }
+      setTunnelUrl(turl)
+      tunnelExpiresAt = Date.now() + TUNNEL_TTL_MS
+      clearTimeout(tunnelTimer); tunnelTimer = setTimeout(() => { void stopTunnel() }, TUNNEL_TTL_MS)
+      send(res, 200, { url: turl, expiresAt: tunnelExpiresAt }); return true
     }
     send(res, 405, { error: 'méthode non gérée' }); return true
   }
@@ -138,12 +296,13 @@ export async function handleAuthoring(req, res) {
 
   try {
     if (req.method === 'POST' && parts.length === 2 && parts[1] === 'deck') {
-      const { name: n } = await readJson(req)
+      const { name: n, template } = await readJson(req)
       if (!okName(n)) return send(res, 400, { error: 'nom invalide (a-z 0-9 -)' }), true
       if (await exists(join(DECKS, n))) return send(res, 409, { error: 'existe déjà' }), true
       await mkdir(join(DECKS, n, 'slides'), { recursive: true })
       await writeFile(cfgPath(n), deckConfigTpl(n))
-      await writeFile(slidePath(n, '01-intro'), slideTpl(n))
+      if (template === 'talk') for (const [id, src] of Object.entries(talkSlides(n))) await writeFile(slidePath(n, id), src)
+      else await writeFile(slidePath(n, '01-intro'), slideTpl(n))
       // README d'authoring (guide pour humain / LLM) — pour le workflow Claude Code
       const readme = (await readFile(README_TPL, 'utf8')).replaceAll('__NAME__', n)
       await writeFile(join(DECKS, n, 'README.md'), readme)

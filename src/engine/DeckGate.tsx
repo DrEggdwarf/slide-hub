@@ -5,6 +5,7 @@ import { unlock } from './sync'
 import { Presentation } from './Presentation'
 import { Console } from './Console'
 import { MobilePilot } from './MobilePilot'
+import { PrintView } from './PrintView'
 import { HubIndex } from '../ui/HubIndex'
 import { tokens } from '../design/tokens'
 
@@ -34,6 +35,7 @@ export function DeckGate({ deckName, view }: { deckName: string; view?: string }
   if (!slides) return <Splash label="Chargement du deck…" />
   return view === 'pilote' ? <MobilePilot slides={slides} deckName={deckName} />
     : view === 'console' ? <Console slides={slides} deckName={deckName} />
+      : view === 'print' ? <PrintView slides={slides} deckName={deckName} />
       : <Presentation slides={slides} deckName={deckName} />
 }
 

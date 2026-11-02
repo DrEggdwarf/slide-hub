@@ -35,6 +35,20 @@ function PilotQr({ url }: { url: string }) {
   )
 }
 
+// Panneau « piloter au téléphone » : QR + copie du lien, visible sans défiler.
+function PilotPanel({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => { try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1400) } catch { /* ignore */ } }
+  return (
+    <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', padding: '12px 14px', borderRadius: 10, background: PANEL, border: `1px solid ${LINE}` }}>
+      <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 1, color: OKC }}>PILOTER AU TÉLÉPHONE</span>
+      <PilotQr url={url} />
+      <span style={{ fontFamily: MONO, fontSize: 11, color: MUT, maxWidth: 176, textAlign: 'center', lineHeight: 1.4 }}>Scanne · clic = agrandir. Accès à durée limitée.</span>
+      <button onClick={copy} style={{ background: 'none', border: `1px solid ${LINE}`, borderRadius: 8, padding: '6px 12px', fontFamily: MONO, fontSize: 12, color: copied ? OKC : TXT, cursor: 'pointer' }}>{copied ? 'Lien copié !' : 'Copier le lien'}</button>
+    </div>
+  )
+}
+
 const BG = '#0f1115'
 const PANEL = '#171a21'
 const LINE = '#262b36'
@@ -150,7 +164,7 @@ export function Console({ slides, deckName }: { slides: SlideModule[]; deckName:
       </div>
 
       {/* aperçus courant + suivant */}
-      <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 1, color: OKC }}>● EN COURS</span>
@@ -165,6 +179,7 @@ export function Console({ slides, deckName }: { slides: SlideModule[]; deckName:
           </div>
           <Preview mod={nxt} step={0} width={380} />
         </div>
+        {pilotUrl && <PilotPanel url={pilotUrl} />}
       </div>
 
       {/* notes */}
@@ -208,16 +223,6 @@ export function Console({ slides, deckName }: { slides: SlideModule[]; deckName:
         <span style={{ fontFamily: MONO, fontSize: 11, color: MUT }}>← → naviguer · clic sur un jalon = sauter</span>
       </div>
 
-      {pilotUrl && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', borderRadius: 10, background: PANEL, border: `1px solid ${LINE}` }}>
-          <PilotQr url={pilotUrl} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-            <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 1, color: OKC }}>RÉGIE MOBILE — SCANNE POUR PILOTER</span>
-            <span style={{ fontFamily: MONO, fontSize: 13, color: TXT, overflowWrap: 'anywhere' }}>{pilotUrl}</span>
-            <span style={{ fontFamily: MONO, fontSize: 12, color: MUT }}>Accès à durée limitée — montre-le aux orateurs. Clique sur le QR pour l'agrandir.</span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
