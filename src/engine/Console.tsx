@@ -9,6 +9,32 @@ const MONO = tokens.type.family.mono
 const SANS = tokens.type.family.sans
 const fmt = (s: number) => `${Math.floor(s / 60)}:${Math.floor(Math.abs(s) % 60).toString().padStart(2, '0')}`
 
+// QR de pilotage : 160 px dans la régie, clic = plein écran (scannable à distance).
+// Niveau de correction « L » : le token est long, moins de modules = QR plus lisible.
+function PilotQr({ url }: { url: string }) {
+  const [big, setBig] = useState(false)
+  useEffect(() => {
+    if (!big) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setBig(false) }
+    window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey)
+  }, [big])
+  const size = big ? Math.min(560, Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.72)) : 160
+  const qr = <div style={{ background: '#fff', padding: big ? 20 : 8, borderRadius: big ? 16 : 8, lineHeight: 0 }}><QRCodeSVG value={url} size={size} level="L" /></div>
+  return (
+    <>
+      <button onClick={() => setBig(true)} title="Agrandir le QR code" aria-label="Agrandir le QR code"
+        style={{ border: 'none', padding: 0, background: 'none', cursor: 'zoom-in', flexShrink: 0 }}>{qr}</button>
+      {big && (
+        <div onClick={() => setBig(false)} role="dialog" aria-label="QR code de pilotage"
+          style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.88)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, cursor: 'zoom-out' }}>
+          {qr}
+          <span style={{ fontFamily: MONO, fontSize: 14, color: '#fff' }}>Scanne pour piloter · clic ou Échap pour fermer</span>
+        </div>
+      )}
+    </>
+  )
+}
+
 const BG = '#0f1115'
 const PANEL = '#171a21'
 const LINE = '#262b36'
@@ -183,12 +209,12 @@ export function Console({ slides, deckName }: { slides: SlideModule[]; deckName:
       </div>
 
       {pilotUrl && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 14px', borderRadius: 10, background: PANEL, border: `1px solid ${LINE}` }}>
-          <div style={{ background: '#fff', padding: 6, borderRadius: 6, lineHeight: 0 }}><QRCodeSVG value={pilotUrl} size={66} /></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', borderRadius: 10, background: PANEL, border: `1px solid ${LINE}` }}>
+          <PilotQr url={pilotUrl} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
             <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 1, color: OKC }}>RÉGIE MOBILE — SCANNE POUR PILOTER</span>
             <span style={{ fontFamily: MONO, fontSize: 13, color: TXT, overflowWrap: 'anywhere' }}>{pilotUrl}</span>
-            <span style={{ fontFamily: MONO, fontSize: 12, color: MUT }}>Accès à durée limitée — montre-le aux orateurs.</span>
+            <span style={{ fontFamily: MONO, fontSize: 12, color: MUT }}>Accès à durée limitée — montre-le aux orateurs. Clique sur le QR pour l'agrandir.</span>
           </div>
         </div>
       )}
